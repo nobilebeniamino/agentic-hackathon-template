@@ -152,23 +152,34 @@ def first_response(request):
         category = classification.get('category', '').upper()
 
         # if natural disaster, append feed snippet
-        if category in ['EARTHQUAKE', 'FLOOD', 'VOLCANO']:
+        if category in ['EARTHQUAKE', 'FLOOD', 'VOLCANO', 'FIRE']:
             try:
                 quakes = recent_quakes(lat, lon)
                 if quakes:
                     latest = quakes[0]['properties']
                     feed_snippet = f"M{latest['mag']} earthquake {latest['place']} at {latest['time']} UTC"
+                    print(f"Found earthquake data: {feed_snippet}")
                 else:
+                    print("No recent earthquakes found, trying GDACS...")
                     gd = gdacs_events(lat, lon)
                     # Safely handle GDACS data
                     if gd and len(gd) > 0:
                         # Convert to string representation instead of JSON
-                        feed_snippet = str(gd[0]) if gd[0] else ''
+                        event = gd[0]
+                        feed_snippet = f"Disaster event: {event.get('eventname', 'Unknown')} - {event.get('alertlevel', 'Unknown')} alert"
+                        print(f"Found GDACS data: {feed_snippet}")
                     else:
                         feed_snippet = ''
-                # re-classify with feed context
-                classification = classify_message(msg, lat, lon, feed_snippet, user_lang=user_lang)
-                print(f"Re-classified with feed: {classification}")
+                        print("No GDACS data found")
+                
+                # Only re-classify if we found some feed data
+                if feed_snippet:
+                    print(f"Re-classifying with feed: {feed_snippet}")
+                    classification = classify_message(msg, lat, lon, feed_snippet, user_lang=user_lang)
+                    print(f"Re-classified with feed: {classification}")
+                else:
+                    print("No external feed data available, using original classification")
+                    
             except Exception as feed_error:
                 print(f"Error fetching external feeds: {feed_error}")
                 feed_snippet = ''
