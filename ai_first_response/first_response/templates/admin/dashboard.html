@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - AI First Response{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--emergency-blue);
+    }
+    
+    .stats-card.critical {
+        border-left-color: var(--emergency-red);
+    }
+    
+    .stats-card.warning {
+        border-left-color: var(--emergency-orange);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--emergency-blue);
+        margin: 0;
+    }
+    
+    .stats-number.critical {
+        color: var(--emergency-red);
+    }
+    
+    .stats-number.warning {
+        color: var(--emergency-orange);
+    }
+    
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        position: relative;
+        height: 350px; /* Fixed height to prevent infinite growth */
+    }
+    
+    .chart-container.daily-chart {
+        height: 400px; /* Slightly taller for the daily chart */
+    }
+    
+    .chart-container canvas {
+        max-height: 280px !important; /* Ensure canvas doesn't exceed container */
+    }
+    
+    .chart-container.daily-chart canvas {
+        max-height: 320px !important;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .severity-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .severity-CRIT { background: #dc3545; color: white; }
+    .severity-HIGH { background: #fd7e14; color: white; }
+    .severity-MED { background: #ffc107; color: black; }
+    .severity-LOW { background: #17a2b8; color: white; }
+    .severity-INFO { background: #6c757d; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2>📊 Emergency Response Dashboard</h2>
+        <p class="text-muted">Real-time statistics and monitoring for emergency responses</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <h3 class="stats-number">{{ total_messages }}</h3>
+            <p class="stats-label">Total Messages</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <h3 class="stats-number">{{ messages_last_30_days }}</h3>
+            <p class="stats-label">Last 30 Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card critical">
+            <h3 class="stats-number critical">{{ critical_messages }}</h3>
+            <p class="stats-label">Critical Emergencies</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card warning">
+            <h3 class="stats-number warning">
+                {% if avg_response_time %}
+                    {{ avg_response_time|floatformat:0 }}ms
+                {% else %}
+                    N/A
+                {% endif %}
+            </h3>
+            <p class="stats-label">Avg Response Time</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="stats-card warning">
+            <h3 class="stats-number warning">{{ error_rate|floatformat:1 }}%</h3>
+            <p class="stats-label">Error Rate</p>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h5>📈 Messages by Severity</h5>
+            <canvas id="severityChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h5>🏷️ Top Emergency Categories</h5>
+            <canvas id="categoryChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="chart-container daily-chart">
+            <h5>📅 Daily Messages (Last 30 Days)</h5>
+            <canvas id="dailyChart" width="800" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Critical Messages Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="table-container">
+            <h5>🚨 Recent Critical Messages</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th>Message</th>
+                            <th>Location</th>
+                            <th>Response Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for msg in recent_critical %}
+                        <tr>
+                            <td>{{ msg.received_at|date:"M d, H:i" }}</td>
+                            <td>{{ msg.ai_category|default:"Unknown" }}</td>
+                            <td>
+                                <span class="severity-badge severity-{{ msg.ai_severity }}">
+                                    {{ msg.get_ai_severity_display }}
+                                </span>
+                            </td>
+                            <td>{{ msg.user_message|truncatechars:50 }}</td>
+                            <td>{{ msg.location_display }}</td>
+                            <td>{{ msg.processing_time_display }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No critical messages yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Severity Chart
+const severityCtx = document.getElementById('severityChart').getContext('2d');
+const severityChart = new Chart(severityCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [
+            {% for stat in severity_stats %}
+            '{{ stat.ai_severity|default:"Unknown" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for stat in severity_stats %}
+                {{ stat.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#dc3545', '#fd7e14', '#ffc107', '#17a2b8', '#6c757d'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Category Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+const categoryChart = new Chart(categoryCtx, {
+    type: 'bar',
+    data: {
+        labels: [
+            {% for stat in category_stats %}
+            '{{ stat.ai_category|default:"Unknown"|truncatechars:15 }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Messages',
+            data: [
+                {% for stat in category_stats %}
+                {{ stat.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: 'rgba(13, 110, 253, 0.8)',
+            borderColor: 'rgba(13, 110, 253, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Daily Chart
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+const dailyChart = new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: [
+            {% for stat in daily_stats %}
+            '{{ stat.day|date:"M d" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Messages per Day',
+            data: [
+                {% for stat in daily_stats %}
+                {{ stat.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            borderColor: 'rgba(13, 110, 253, 1)',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

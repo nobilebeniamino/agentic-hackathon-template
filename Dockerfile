@@ -4,22 +4,26 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
+# Set up working directory
 WORKDIR /app
 
-# ===== System dependencies =====
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# ===== Python dependencies =====
-COPY requirements.txt .
+# Copy and install Python dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ===== Project source =====
-COPY . .
+# Copy project files
+COPY . /app/
 
-# ===== Optional: collect static files (safe if none exist) =====
+# Move into Django project directory where manage.py lives
+WORKDIR /app/ai_first_response
+
+# Collect static files if any (ignore errors)
 RUN python manage.py collectstatic --noinput || true
 
-# ===== Launch gunicorn on Cloud Run’s default port =====
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8080"]
+# Expose port and run Gunicorn
+CMD ["gunicorn", "ai_first_response.wsgi:application", "--bind", "0.0.0.0:8080"]

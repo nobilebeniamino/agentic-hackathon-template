@@ -12,10 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os, dj_database_url
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+dotenv_path = BASE_DIR / '.env'
+load_dotenv(dotenv_path)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -26,8 +29,11 @@ SECRET_KEY = 'django-insecure-mlmq-+2(!#8h(as_px+_+8bhf(3e)x_((wc*rezh73s02y4!&j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*",]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://ai-first-response-171403116236.europe-west1.run.app",
+]
 
 # Application definition
 
@@ -38,11 +44,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'first_response',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -75,7 +83,7 @@ WSGI_APPLICATION = 'ai_first_response.wsgi.application'
 
 DATABASES = {
     "default": dj_database_url.parse(
-        os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3"),
+        os.getenv("DATABASE_URL", "sqlite:///" + str(BASE_DIR / "db.sqlite3")),
         conn_max_age=600,
         ssl_require=True,
     )
@@ -106,6 +114,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
+LANGUAGES = [
+    ('en', 'English'),
+    ('it', 'Italiano'),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
@@ -116,9 +133,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# Folder in the container to collect static files
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
