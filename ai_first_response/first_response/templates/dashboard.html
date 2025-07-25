@@ -102,6 +102,80 @@
         margin-bottom: 1rem;
     }
     
+    /* Voice Controls Styles */
+    .voice-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .btn-voice {
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-record {
+        background: var(--emergency-red);
+        color: white;
+    }
+    
+    .btn-record:hover {
+        background: #dc3545;
+        transform: scale(1.05);
+    }
+    
+    .btn-record.recording {
+        background: #dc3545;
+        animation: pulse 1s infinite;
+    }
+    
+    .btn-stop {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-stop:hover {
+        background: #5a6268;
+        transform: scale(1.05);
+    }
+    
+    .btn-play {
+        background: var(--emergency-green);
+        color: white;
+    }
+    
+    .btn-play:hover {
+        background: #198754;
+        transform: scale(1.05);
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    .voice-status {
+        flex-grow: 1;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .audio-player {
+        display: none;
+    }
+    
     .loading-indicator {
         display: none;
         text-align: center;
@@ -236,6 +310,23 @@
             </button>
         </div>
         
+        <!-- Voice Controls -->
+        <div class="voice-controls">
+            <button class="btn btn-voice btn-record" id="record-btn" onclick="startRecording()" title="{% trans 'Start Recording' %}">
+                🎤
+            </button>
+            <button class="btn btn-voice btn-stop" id="stop-btn" onclick="stopRecording()" style="display: none;" title="{% trans 'Stop Recording' %}">
+                ⏹️
+            </button>
+            <button class="btn btn-voice btn-play" id="play-response-btn" onclick="playLastResponse()" style="display: none;" title="{% trans 'Play AI Response' %}">
+                🔊
+            </button>
+            <div class="voice-status" id="voice-status">
+                {% trans "Click the microphone to record a voice message" %}
+            </div>
+            <audio id="response-audio" class="audio-player" controls style="display: none;"></audio>
+        </div>
+        
         <!-- Quick Actions -->
         <div class="row mt-3">
             {% for category in emergency_categories %}
@@ -259,6 +350,9 @@
                 </div>
             {% endfor %}
         </div>
+
+        <!-- Voice Controls Section -->
+
     </div>
 </div>
 {% endblock %}
@@ -285,6 +379,7 @@ const translations = {
 };
 let userLat = null;
 let userLon = null;
+let isProcessingMessage = false; // Flag to prevent overlapping message processing
 
 // Get user location on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -293,7 +388,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Allow Enter key to send message
     document.getElementById('message-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            sendMessage();
+            e.preventDefault(); // Prevent any default behavior
+            const message = e.target.value.trim();
+            if (message) {
+                console.log('Enter key pressed, sending message:', message);
+                sendMessage();
+            } else {
+                console.log('Enter key pressed but no message to send');
+            }
         }
     });
 });
@@ -349,7 +451,19 @@ async function sendMessage() {
     const input = document.getElementById('message-input');
     const message = input.value.trim();
     
-    if (!message) return;
+    console.log('sendMessage called with message:', message);
+    
+    if (!message) {
+        console.log('No message to send, returning early');
+        return;
+    }
+    
+    if (isProcessingMessage) {
+        console.log('Already processing a message, skipping');
+        return;
+    }
+    
+    isProcessingMessage = true;
     
     // Add user message to chat
     addMessage(message, true);
@@ -423,8 +537,12 @@ async function sendMessage() {
         }
         
     } catch (error) {
+        console.error('sendMessage error:', error);
+        console.log('Error occurred in sendMessage function');
         showLoading(false);
-        addMessage(`❌ <strong>${translations.connection_error}:</strong> ${translations.connection_error_message}`, false, true);
+        addMessage(`❌ <strong>{% trans 'Text Message Error' %}:</strong> ${error.message}`, false, true);
+    } finally {
+        isProcessingMessage = false;
     }
 }
 
@@ -474,6 +592,210 @@ function getCookie(name) {
     }
     
     return cookieValue;
+}
+
+// Voice Recording Functions
+let isRecording = false;
+let mediaRecorder;
+let audioChunks = [];
+let lastAudioBlob = null;
+let lastResponseAudio = null;
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.start();
+            isRecording = true;
+            
+            // Update UI
+            document.getElementById('record-btn').style.display = 'none';
+            document.getElementById('stop-btn').style.display = 'inline-flex';
+            document.getElementById('play-response-btn').style.display = 'none';
+            document.getElementById('response-audio').style.display = 'none';
+            document.getElementById('voice-status').textContent = "{% trans 'Recording... Click stop when done' %}";
+            
+            // Handle data collection
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            
+            // Handle recording stop
+            mediaRecorder.onstop = () => {
+                isRecording = false;
+                lastAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                
+                // Update UI
+                document.getElementById('record-btn').style.display = 'inline-flex';
+                document.getElementById('stop-btn').style.display = 'none';
+                document.getElementById('voice-status').textContent = "{% trans 'Processing audio...' %}";
+                
+                // Send audio to server
+                sendVoiceMessage(lastAudioBlob);
+                
+                // Stop all tracks to release microphone
+                stream.getTracks().forEach(track => track.stop());
+            };
+        })
+        .catch(error => {
+            console.error('Error accessing microphone:', error);
+            document.getElementById('voice-status').textContent = "{% trans 'Microphone access denied. Please check your browser settings.' %}";
+        });
+}
+
+function stopRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+    }
+}
+
+async function sendVoiceMessage(audioBlob) {
+    if (isProcessingMessage) {
+        console.log('Already processing a message, skipping voice message');
+        return;
+    }
+    
+    isProcessingMessage = true;
+    
+    try {
+        // Show loading
+        showLoading(true);
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'voice_message.webm');
+        formData.append('language', '{% get_current_language as CURRENT_LANG %}{{ CURRENT_LANG }}');
+        formData.append('latitude', userLat || 45.0703);
+        formData.append('longitude', userLon || 7.6869);
+        
+        // Get CSRF token
+        const csrfToken = getCookie('csrftoken');
+        
+        // Send to server
+        const response = await fetch('/api/first-response/voice/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        console.log('Voice response data:', data);
+        
+        if (data.success) {
+            // Add transcribed message to chat as user message
+            addMessage(`🎤 ${data.transcribed_text}`, true);
+            
+            // Format AI response the same way as text messages
+            const severity = data.classification;
+            const category = data.category;
+            const isEmergency = severity === 'CRIT' || severity === 'HIGH';
+            const severityIcon = getSeverityIcon(severity);
+            const categoryIcon = getCategoryIcon(category);
+            
+            let responseHtml = `${categoryIcon} <strong>${category}</strong> - ${severityIcon} ${severity}<br><br>`;
+            
+            // Add instructions
+            if (data.instructions) {
+                responseHtml += `<strong>${translations.instructions}:</strong><br>`;
+                // Handle both string and array formats
+                if (typeof data.instructions === 'string') {
+                    responseHtml += `• ${data.instructions}<br>`;
+                } else if (Array.isArray(data.instructions)) {
+                    data.instructions.forEach(instruction => {
+                        responseHtml += `• ${instruction}<br>`;
+                    });
+                }
+            }
+            
+            if (isEmergency) {
+                responseHtml += `<br><strong>⚠️ ${translations.emergency_call_warning}</strong>`;
+            }
+            
+            // Add AI response to chat with proper formatting
+            addMessage(responseHtml, false, isEmergency);
+            
+            // Store audio URL for playback
+            if (data.audio_url && data.tts_success) {
+                console.log('Audio URL received:', data.audio_url);
+                lastResponseAudio = data.audio_url;
+                document.getElementById('play-response-btn').style.display = 'inline-flex';
+                document.getElementById('response-audio').style.display = 'block';
+                
+                // Pre-load the audio
+                const audio = document.getElementById('response-audio');
+                audio.src = data.audio_url;
+                audio.load(); // Force load
+                
+                document.getElementById('voice-status').textContent = "{% trans 'Voice message processed. Click speaker to hear response.' %}";
+            } else {
+                console.log('No audio URL in response or TTS failed');
+                if (data.tts_error) {
+                    console.error('TTS Error:', data.tts_error);
+                    document.getElementById('voice-status').textContent = `TTS Error: ${data.tts_error}`;
+                } else {
+                    document.getElementById('voice-status').textContent = "{% trans 'Voice message processed successfully.' %}";
+                }
+            }
+            
+            // Show disaster feeds if available - for now just log them
+            if (data.disaster_feeds) {
+                console.log('Disaster feeds available:', data.disaster_feeds);
+                // TODO: Implement showDisasterFeeds function if needed
+            }
+            
+        } else {
+            addMessage(`${translations.error}: ${data.error}`, false, true);
+            document.getElementById('voice-status').textContent = `{% trans 'Error' %}: ${data.error}`;
+        }
+        
+    } catch (error) {
+        console.error('Voice message error:', error);
+        console.log('Error occurred in sendVoiceMessage function');
+        addMessage(`❌ <strong>{% trans 'Voice Error' %}:</strong> ${error.message}`, false, true);
+        document.getElementById('voice-status').textContent = `{% trans 'Voice Error' %}: ${error.message}`;
+    } finally {
+        showLoading(false);
+        isProcessingMessage = false;
+    }
+}
+
+function playLastResponse() {
+    if (lastResponseAudio) {
+        console.log('Attempting to play audio:', lastResponseAudio);
+        const audio = document.getElementById('response-audio');
+        audio.src = lastResponseAudio;
+        
+        // Update status
+        document.getElementById('voice-status').textContent = "{% trans 'Playing response...' %}";
+        
+        audio.play().then(() => {
+            console.log('Audio playback started successfully');
+        }).catch(error => {
+            console.error('Error playing audio:', error);
+            document.getElementById('voice-status').textContent = `{% trans 'Error playing audio response' %}: ${error.message}`;
+            
+            // Try alternative approach - open in new tab
+            if (confirm("{% trans 'Audio playback failed. Open audio file in new tab?' %}")) {
+                window.open(lastResponseAudio, '_blank');
+            }
+        });
+        
+        // Add event listeners for audio events
+        audio.onended = () => {
+            document.getElementById('voice-status').textContent = "{% trans 'Audio playback finished' %}";
+        };
+        
+        audio.onerror = (e) => {
+            console.error('Audio error event:', e);
+            document.getElementById('voice-status').textContent = "{% trans 'Audio file could not be loaded' %}";
+        };
+    } else {
+        console.log('No audio URL available');
+        document.getElementById('voice-status').textContent = "{% trans 'No audio response available' %}";
+    }
 }
 </script>
 {% endblock %}

@@ -228,6 +228,55 @@ msgstr ""
 msgid "Instructions"
 msgstr "Istruzioni"
 
+# Voice Recording Translations
+msgid "Start Recording"
+msgstr "Inizia Registrazione"
+
+msgid "Stop Recording"
+msgstr "Ferma Registrazione"
+
+msgid "Play Last Response"
+msgstr "Riproduci Ultima Risposta"
+
+msgid "Click the microphone to record a voice message"
+msgstr "Clicca il microfono per registrare un messaggio vocale"
+
+msgid "Recording... Click stop when done"
+msgstr "Registrando... Clicca stop quando hai finito"
+
+msgid "Processing audio..."
+msgstr "Elaborando audio..."
+
+msgid "Microphone access denied. Please check your browser settings."
+msgstr "Accesso al microfono negato. Controlla le impostazioni del browser."
+
+msgid "Voice message processed. Click speaker to hear response."
+msgstr "Messaggio vocale elaborato. Clicca l'altoparlante per sentire la risposta."
+
+msgid "Voice message processed successfully."
+msgstr "Messaggio vocale elaborato con successo."
+
+msgid "Error playing audio response"
+msgstr "Errore nella riproduzione della risposta audio"
+
+msgid "Voice control ready. Press the microphone to start recording."
+msgstr "Controllo vocale pronto. Premi il microfono per iniziare la registrazione."
+
+msgid "Recording... Press the stop button when done."
+msgstr "Registrazione in corso... Premi il pulsante stop quando hai finito."
+
+msgid "Recording completed. Click play to listen or send your message."
+msgstr "Registrazione completata. Clicca play per ascoltare o invia il messaggio."
+
+msgid "Error accessing microphone. Please check your settings."
+msgstr "Errore nell'accesso al microfono. Controlla le impostazioni."
+
+msgid "Voice message sent..."
+msgstr "Messaggio vocale inviato..."
+
+msgid "Transcribed"
+msgstr "Trascritto"
+
 #~ msgid "I'm not sure, please call 112."
 #~ msgstr "Non sono sicuro, chiama il 112."
 

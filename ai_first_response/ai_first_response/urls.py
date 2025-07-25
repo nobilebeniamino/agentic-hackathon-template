@@ -19,6 +19,8 @@ from django.urls import path, include
 from django.shortcuts import redirect
 from django.conf.urls.i18n import i18n_patterns
 from django.utils.translation import get_language
+from django.conf import settings
+from django.conf.urls.static import static
 from first_response.urls import api_urlpatterns
 
 def home_redirect(request):
@@ -37,3 +39,7 @@ urlpatterns += i18n_patterns(
     path('dashboard/', include('first_response.urls')),
     prefix_default_language=True
 )
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

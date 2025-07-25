@@ -1,15 +1,18 @@
 import os
 import json
 import time
+import tempfile
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import get_language
+from django.core.files.storage import default_storage
 from .models import EmergencyCategory, ReceivedMessage
 from .responders import classify_message
 from .disaster_feeds import recent_quakes, gdacs_events
+from .audio_utils import speech_to_text, text_to_speech, convert_audio_format, cleanup_audio_file
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Q, Avg
 from django.db.models.functions import TruncDay, TruncHour
@@ -313,6 +316,155 @@ def admin_dashboard(request):
     }
     
     return render(request, 'admin/dashboard.html', context)
+
+
+@csrf_exempt
+def voice_message(request):
+    """Handle voice message processing"""
+    if request.method != 'POST':
+        return HttpResponseBadRequest(json.dumps({"error": "POST required"}), content_type="application/json")
+    
+    start_time = time.time()
+    received_message = None
+    temp_files = []  # Track temporary files for cleanup
+    
+    try:
+        # Check if audio file is provided
+        if 'audio' not in request.FILES:
+            return JsonResponse({
+                "success": False,
+                "error": "No audio file provided"
+            }, status=400)
+        
+        audio_file = request.FILES['audio']
+        
+        # Get additional parameters
+        language = request.POST.get('language', 'en')
+        latitude = request.POST.get('latitude')
+        longitude = request.POST.get('longitude')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        client_ip = get_client_ip(request)
+        
+        print(f"Processing voice message - Language: {language}, File: {audio_file.name}")
+        
+        # Save uploaded audio file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp_file:
+            for chunk in audio_file.chunks():
+                tmp_file.write(chunk)
+            temp_audio_path = tmp_file.name
+            temp_files.append(temp_audio_path)
+        
+        # Convert audio to WAV format for better compatibility
+        wav_path = convert_audio_format(temp_audio_path, 'wav')
+        if wav_path:
+            temp_files.append(wav_path)
+            audio_path_to_use = wav_path
+        else:
+            audio_path_to_use = temp_audio_path
+        
+        # Convert speech to text
+        stt_result = speech_to_text(audio_path_to_use, language)
+        
+        if not stt_result['success']:
+            return JsonResponse({
+                "success": False,
+                "error": f"Speech recognition failed: {stt_result['error']}"
+            }, status=400)
+        
+        message_text = stt_result['text']
+        print(f"Transcribed text: {message_text}")
+        
+        # Process the message through the normal classification pipeline
+        lat = float(latitude) if latitude else 45.0703  # Default to Turin
+        lon = float(longitude) if longitude else 7.6869
+        classification_result = classify_message(message_text, lat, lon, user_lang=language)
+        
+        # Generate TTS response
+        instructions = classification_result.get('instructions', ['Unable to process your request.'])
+        if isinstance(instructions, list):
+            response_text = ' '.join(instructions)
+        else:
+            response_text = str(instructions)
+        
+        print(f"Generating TTS for text: {response_text[:100]}...")
+        tts_result = text_to_speech(response_text, language)
+        print(f"TTS result: {tts_result}")
+        
+        # Create received message record
+        received_message = ReceivedMessage.objects.create(
+            user_message=message_text,
+            message_text=message_text,
+            message_type='voice',
+            language=language,
+            user_latitude=lat,
+            user_longitude=lon,
+            user_agent=user_agent,
+            user_ip=client_ip,
+            session_key='',
+            ai_category=classification_result.get('category', 'general'),
+            ai_severity=classification_result.get('severity', 'INFO'),
+            ai_instructions=classification_result.get('instructions', []),
+            response_time_ms=int((time.time() - start_time) * 1000),
+            processed_at=timezone.now()
+        )
+        
+        # Prepare response
+        response_data = {
+            "success": True,
+            "message_id": str(received_message.id),
+            "transcribed_text": message_text,
+            "classification": classification_result.get('severity', 'unknown'),
+            "category": classification_result.get('category', 'general'),
+            "instructions": response_text,
+            "response_time_ms": int((time.time() - start_time) * 1000),
+            "audio_url": tts_result.get('audio_url') if tts_result.get('success') else None,
+            "tts_success": tts_result.get('success', False),
+            "tts_error": tts_result.get('error') if not tts_result.get('success') else None
+        }
+        
+        # Add disaster feeds if coordinates provided
+        if latitude and longitude:
+            try:
+                # Get earthquake data
+                quakes = recent_quakes(lat, lon, radius_km=300, min_mag=3.0, minutes=60)
+                
+                # Get GDACS data
+                gdacs = gdacs_events(lat, lon, radius_km=500)
+                
+                response_data["disaster_feeds"] = {
+                    "earthquakes": quakes[:3],  # Limit to 3 most recent
+                    "gdacs_events": gdacs[:3],  # Limit to 3 most relevant
+                    "location": {"latitude": lat, "longitude": lon}
+                }
+                
+                print(f"Found {len(quakes)} earthquakes and {len(gdacs)} GDACS events near {lat}, {lon}")
+                
+            except Exception as e:
+                print(f"Error fetching disaster feeds: {e}")
+                response_data["disaster_feeds"] = {"error": str(e)}
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        error_msg = f"Voice processing error: {str(e)}"
+        print(error_msg)
+        
+        # Log error in database if possible
+        if received_message:
+            received_message.has_error = True
+            received_message.error_message = error_msg
+            received_message.save()
+        
+        return JsonResponse({
+            "success": False,
+            "error": error_msg,
+            "response_time_ms": int((time.time() - start_time) * 1000)
+        }, status=500)
+    
+    finally:
+        # Clean up temporary files
+        for temp_file in temp_files:
+            cleanup_audio_file(temp_file)
 
 def get_client_ip(request):
     """Extract client IP address from request"""

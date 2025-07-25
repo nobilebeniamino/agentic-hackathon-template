@@ -26,6 +26,12 @@ class EmergencyCategory(models.Model):
 class ReceivedMessage(models.Model):
     """Model to store received emergency messages and responses"""
     
+    # Message type choices
+    MESSAGE_TYPE_CHOICES = [
+        ('text', 'Text Message'),
+        ('voice', 'Voice Message'),
+    ]
+    
     # Severity choices
     SEVERITY_CHOICES = [
         ('CRIT', 'Critical'),
@@ -35,7 +41,12 @@ class ReceivedMessage(models.Model):
         ('INFO', 'Information'),
     ]
     
-    # Original user input
+    # Message details
+    message_text = models.TextField(help_text="Message content (original or transcribed)")
+    message_type = models.CharField(max_length=10, choices=MESSAGE_TYPE_CHOICES, default='text', help_text="Type of message")
+    language = models.CharField(max_length=10, default='en', help_text="Language of the message")
+    
+    # Original user input (backward compatibility)
     user_message = models.TextField(help_text="Original message from user")
     user_latitude = models.FloatField(help_text="User's latitude coordinate")
     user_longitude = models.FloatField(help_text="User's longitude coordinate")
