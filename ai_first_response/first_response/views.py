@@ -17,6 +17,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Q, Avg
 from django.db.models.functions import TruncDay, TruncHour
 from datetime import datetime, timedelta
+import math
 
 def dashboard(request):
     """Render the emergency chat dashboard"""
@@ -474,3 +475,147 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+
+def _haversine_distance(lat1, lon1, lat2, lon2):
+    """Calculate the great circle distance between two points on earth (in km)"""
+    R = 6371  # Earth's radius in kilometers
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi, dl = math.radians(lat2-lat1), math.radians(lon2-lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dl/2)**2
+    return 2*R*math.asin(math.sqrt(a))
+
+
+@staff_member_required
+def emergency_alerts(request):
+    """API endpoint to check for emergency clusters and return alerts"""
+    try:
+        # Get time window for checking clusters
+        time_window_hours = getattr(settings, 'EMERGENCY_CLUSTER_TIME_WINDOW_HOURS', 24)
+        since_time = timezone.now() - timedelta(hours=time_window_hours)
+        
+        # Get recent messages within time window
+        recent_messages = ReceivedMessage.objects.filter(
+            processed_at__gte=since_time,
+            user_latitude__isnull=False,
+            user_longitude__isnull=False,
+            ai_category__isnull=False
+        ).exclude(ai_category='Unknown').order_by('-processed_at')
+        
+        # Group messages by category
+        category_groups = {}
+        for message in recent_messages:
+            category = message.ai_category
+            if category not in category_groups:
+                category_groups[category] = []
+            category_groups[category].append(message)
+        
+        alerts = []
+        radius_km = getattr(settings, 'EMERGENCY_CLUSTER_RADIUS_KM', 50)
+        min_count = getattr(settings, 'EMERGENCY_CLUSTER_MIN_COUNT', 10)
+        
+        # Check each category for clusters
+        for category, messages in category_groups.items():
+            if len(messages) < min_count:
+                continue
+                
+            # Check for geographical clusters
+            clusters = find_clusters(messages, radius_km, min_count)
+            
+            for cluster in clusters:
+                # Calculate severity distribution
+                severity_counts = {}
+                for msg in cluster['messages']:
+                    severity = msg.ai_severity or 'UNKNOWN'
+                    severity_counts[severity] = severity_counts.get(severity, 0) + 1
+                
+                # Determine dominant severity
+                dominant_severity = max(severity_counts.items(), key=lambda x: x[1])[0] if severity_counts else 'UNKNOWN'
+                
+                alerts.append({
+                    'id': f"{category}_{cluster['center_lat']:.4f}_{cluster['center_lon']:.4f}",
+                    'category': category,
+                    'count': cluster['count'],
+                    'center_lat': cluster['center_lat'],
+                    'center_lon': cluster['center_lon'],
+                    'radius_km': radius_km,
+                    'dominant_severity': dominant_severity,
+                    'severity_distribution': severity_counts,
+                    'first_occurrence': cluster['first_occurrence'].isoformat(),
+                    'last_occurrence': cluster['last_occurrence'].isoformat(),
+                    'time_span_hours': round((cluster['last_occurrence'] - cluster['first_occurrence']).total_seconds() / 3600, 1)
+                })
+        
+        # Sort alerts by count (highest first)
+        alerts.sort(key=lambda x: x['count'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'alerts': alerts,
+            'total_alerts': len(alerts),
+            'checked_time_window_hours': time_window_hours,
+            'cluster_settings': {
+                'radius_km': radius_km,
+                'min_count': min_count
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating emergency alerts: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'alerts': []
+        }, status=500)
+
+
+def find_clusters(messages, radius_km, min_count):
+    """Find geographical clusters of messages"""
+    clusters = []
+    processed_indices = set()
+    
+    for i, center_msg in enumerate(messages):
+        if i in processed_indices:
+            continue
+            
+        # Find all messages within radius of this message
+        cluster_messages = []
+        cluster_indices = []
+        
+        for j, msg in enumerate(messages):
+            if j in processed_indices:
+                continue
+                
+            distance = _haversine_distance(
+                center_msg.user_latitude, center_msg.user_longitude,
+                msg.user_latitude, msg.user_longitude
+            )
+            
+            if distance <= radius_km:
+                cluster_messages.append(msg)
+                cluster_indices.append(j)
+        
+        # If cluster is large enough, add it
+        if len(cluster_messages) >= min_count:
+            # Calculate cluster center (centroid)
+            center_lat = sum(msg.user_latitude for msg in cluster_messages) / len(cluster_messages)
+            center_lon = sum(msg.user_longitude for msg in cluster_messages) / len(cluster_messages)
+            
+            # Get time range
+            times = [msg.processed_at for msg in cluster_messages]
+            first_occurrence = min(times)
+            last_occurrence = max(times)
+            
+            clusters.append({
+                'messages': cluster_messages,
+                'count': len(cluster_messages),
+                'center_lat': center_lat,
+                'center_lon': center_lon,
+                'first_occurrence': first_occurrence,
+                'last_occurrence': last_occurrence
+            })
+            
+            # Mark these messages as processed
+            processed_indices.update(cluster_indices)
+    
+    return clusters

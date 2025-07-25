@@ -146,6 +146,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
+# Emergency Alert Settings
+EMERGENCY_CLUSTER_RADIUS_KM = 50  # Radius in kilometers to check for emergency clusters
+EMERGENCY_CLUSTER_MIN_COUNT = 10  # Minimum number of events to trigger an alert
+EMERGENCY_CLUSTER_TIME_WINDOW_HOURS = 24  # Time window to check for clusters (in hours)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

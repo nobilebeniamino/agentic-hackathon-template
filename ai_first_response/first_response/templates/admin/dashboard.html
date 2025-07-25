@@ -87,6 +87,74 @@
     .severity-MED { background: #ffc107; color: black; }
     .severity-LOW { background: #17a2b8; color: white; }
     .severity-INFO { background: #6c757d; color: white; }
+    
+    /* Emergency Alerts Styles */
+    .alerts-container {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .alert-item {
+        background: linear-gradient(135deg, #ffebee, #ffcdd2);
+        border: 2px solid var(--emergency-red);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        animation: pulse-border 2s infinite;
+    }
+    
+    .alert-item.critical {
+        background: linear-gradient(135deg, #ffebee, #ffcdd2);
+        border-color: #d32f2f;
+    }
+    
+    .alert-item.high {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        border-color: #f57c00;
+    }
+    
+    .alert-item.medium {
+        background: linear-gradient(135deg, #fffde7, #fff9c4);
+        border-color: #fbc02d;
+    }
+    
+    @keyframes pulse-border {
+        0% { border-color: var(--emergency-red); }
+        50% { border-color: #ff5722; }
+        100% { border-color: var(--emergency-red); }
+    }
+    
+    .alert-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #d32f2f;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .alert-details {
+        color: #666;
+        margin: 0;
+        line-height: 1.4;
+    }
+    
+    .alert-status {
+        background: #2196f3;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .no-alerts {
+        text-align: center;
+        color: #28a745;
+        font-style: italic;
+        padding: 2rem;
+    }
 </style>
 {% endblock %}
 
@@ -95,6 +163,21 @@
     <div class="col-12 mb-4">
         <h2>📊 {% trans "Emergency Response Dashboard" %}</h2>
         <p class="text-muted">{% trans "Real-time statistics and monitoring for emergency responses" %}</p>
+    </div>
+</div>
+
+<!-- Emergency Alerts Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="alerts-container">
+            <h4>🚨 {% trans "Emergency Cluster Alerts" %} <span class="alert-status" id="alert-status">{% trans "Checking..." %}</span></h4>
+            <p class="text-muted">{% trans "Automatic detection of emergency clusters in geographical areas" %}</p>
+            <div id="alerts-list">
+                <div class="no-alerts">
+                    <p>{% trans "Loading emergency alerts..." %}</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -320,6 +403,109 @@ const dailyChart = new Chart(dailyCtx, {
                 beginAtZero: true
             }
         }
+    }
+});
+
+// Emergency Alerts Polling
+let alertsPollingInterval;
+
+function loadEmergencyAlerts() {
+    fetch('/api/first-response/alerts/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Alerts data:', data);
+            updateAlertsDisplay(data);
+        })
+        .catch(error => {
+            console.error('Error loading alerts:', error);
+            document.getElementById('alert-status').textContent = '{% trans "Error" %}';
+            document.getElementById('alert-status').className = 'alert-status';
+            document.getElementById('alert-status').style.background = '#dc3545';
+        });
+}
+
+function updateAlertsDisplay(data) {
+    const alertsList = document.getElementById('alerts-list');
+    const alertStatus = document.getElementById('alert-status');
+    
+    if (data.success && data.alerts.length > 0) {
+        // Update status
+        alertStatus.textContent = `${data.total_alerts} {% trans "Active Alerts" %}`;
+        alertStatus.style.background = '#dc3545';
+        
+        // Generate alerts HTML
+        let alertsHtml = '';
+        data.alerts.forEach(alert => {
+            const severityClass = alert.dominant_severity.toLowerCase();
+            const categoryIcon = getCategoryIcon(alert.category);
+            const timeSpan = alert.time_span_hours;
+            
+            alertsHtml += `
+                <div class="alert-item ${severityClass}">
+                    <div class="alert-title">
+                        ${categoryIcon} {% trans "Emergency Cluster" %}: ${alert.category}
+                    </div>
+                    <div class="alert-details">
+                        <strong>📍 {% trans "Location" %}:</strong> ${alert.center_lat.toFixed(4)}, ${alert.center_lon.toFixed(4)}<br>
+                        <strong>📊 {% trans "Count" %}:</strong> ${alert.count} {% trans "events in" %} ${alert.radius_km}km {% trans "radius" %}<br>
+                        <strong>⚠️ {% trans "Severity" %}:</strong> ${alert.dominant_severity}<br>
+                        <strong>⏰ {% trans "Time span" %}:</strong> ${timeSpan} {% trans "hours" %}<br>
+                        <strong>🕐 {% trans "First" %}:</strong> ${new Date(alert.first_occurrence).toLocaleString()}<br>
+                        <strong>🕑 {% trans "Last" %}:</strong> ${new Date(alert.last_occurrence).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        });
+        
+        alertsList.innerHTML = alertsHtml;
+    } else if (data.success) {
+        // No alerts
+        alertStatus.textContent = '{% trans "All Clear" %}';
+        alertStatus.style.background = '#28a745';
+        alertsList.innerHTML = `
+            <div class="no-alerts">
+                <p>✅ {% trans "No emergency clusters detected" %}</p>
+                <small class="text-muted">{% trans "Last check" %}: ${new Date().toLocaleString()}</small>
+            </div>
+        `;
+    } else {
+        // Error
+        alertStatus.textContent = '{% trans "Error" %}';
+        alertStatus.style.background = '#dc3545';
+        alertsList.innerHTML = `
+            <div class="no-alerts">
+                <p>❌ {% trans "Error loading alerts" %}: ${data.error || '{% trans "Unknown error" %}'}</p>
+            </div>
+        `;
+    }
+}
+
+function getCategoryIcon(category) {
+    const icons = {
+        'Earthquake': '🏠',
+        'Fire': '🔥', 
+        'Medical': '🚑',
+        'Flood': '🌊',
+        'Emergency': '🆘',
+        'Weather': '🌩️',
+        'Police': '👮'
+    };
+    return icons[category] || '🆘';
+}
+
+// Start polling when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Load alerts immediately
+    loadEmergencyAlerts();
+    
+    // Set up polling every 60 seconds
+    alertsPollingInterval = setInterval(loadEmergencyAlerts, 60000);
+});
+
+// Stop polling when page unloads
+window.addEventListener('beforeunload', function() {
+    if (alertsPollingInterval) {
+        clearInterval(alertsPollingInterval);
     }
 });
 </script>

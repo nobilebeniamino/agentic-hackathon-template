@@ -277,6 +277,61 @@ msgstr "Messaggio vocale inviato..."
 msgid "Transcribed"
 msgstr "Trascritto"
 
+# Emergency Alerts
+msgid "Emergency Cluster Alerts"
+msgstr "Allarmi Cluster Emergenze"
+
+msgid "Checking..."
+msgstr "Verifica in corso..."
+
+msgid "Automatic detection of emergency clusters in geographical areas"
+msgstr "Rilevamento automatico di cluster di emergenze in aree geografiche"
+
+msgid "Loading emergency alerts..."
+msgstr "Caricamento allarmi emergenze..."
+
+msgid "Emergency Cluster"
+msgstr "Cluster Emergenza"
+
+msgid "Count"
+msgstr "Conteggio"
+
+msgid "events in"
+msgstr "eventi in"
+
+msgid "radius"
+msgstr "raggio"
+
+msgid "Time span"
+msgstr "Durata"
+
+msgid "hours"
+msgstr "ore"
+
+msgid "First"
+msgstr "Primo"
+
+msgid "Last"
+msgstr "Ultimo"
+
+msgid "Active Alerts"
+msgstr "Allarmi Attivi"
+
+msgid "All Clear"
+msgstr "Tutto OK"
+
+msgid "No emergency clusters detected"
+msgstr "Nessun cluster di emergenze rilevato"
+
+msgid "Last check"
+msgstr "Ultimo controllo"
+
+msgid "Error loading alerts"
+msgstr "Errore nel caricamento allarmi"
+
+msgid "Unknown error"
+msgstr "Errore sconosciuto"
+
 #~ msgid "I'm not sure, please call 112."
 #~ msgstr "Non sono sicuro, chiama il 112."
 
