@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Emergency Chat - AI First Response{% endblock %}
+{% block title %}{% trans "Emergency Chat - AI First Response" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -144,31 +145,56 @@
     <div class="col-12">
         <!-- Emergency Numbers Section -->
         <div class="emergency-numbers">
-            <h5 class="mb-3">🚨 <strong>Emergency Numbers</strong></h5>
-            <div class="row">
-                <div class="col-md-4">
-                    <strong>🚑 Medical Emergency:</strong> 118
+            <h5 class="mb-3">🚨 <strong>{% trans "Emergency Numbers" %}</strong></h5>
+            {% get_current_language as LANGUAGE_CODE %}
+            {% if LANGUAGE_CODE == 'it' %}
+                <!-- Italian Emergency Numbers -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>🚑 {% trans "Medical Emergency" %}:</strong> 118
+                    </div>
+                    <div class="col-md-4">
+                        <strong>🚒 {% trans "Fire Department" %}:</strong> 115
+                    </div>
+                    <div class="col-md-4">
+                        <strong>👮 {% trans "Police" %}:</strong> 113
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <strong>🚒 Fire Department:</strong> 115
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <strong>🆘 {% trans "General Emergency" %}:</strong> 112
+                    </div>
+                    <div class="col-md-4">
+                        <strong>⛵ {% trans "Coast Guard" %}:</strong> 1530
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <strong>👮 Police:</strong> 113
+            {% else %}
+                <!-- US Emergency Numbers -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>🚑 {% trans "Medical Emergency" %}:</strong> 911
+                    </div>
+                    <div class="col-md-4">
+                        <strong>🚒 {% trans "Fire Department" %}:</strong> 911
+                    </div>
+                    <div class="col-md-4">
+                        <strong>👮 {% trans "Police" %}:</strong> 911
+                    </div>
                 </div>
-            </div>
-            <div class="row mt-2">
-                <div class="col-md-6">
-                    <strong>🆘 General Emergency:</strong> 112
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <strong>🆘 {% trans "General Emergency" %}:</strong> 911
+                    </div>
+                    <div class="col-md-4">
+                        <strong>⛵ {% trans "Coast Guard" %}:</strong> 1-800-424-8802
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <strong>⛵ Coast Guard:</strong> 1530
-                </div>
-            </div>
+            {% endif %}
         </div>
 
         <!-- Location Status -->
         <div class="location-status">
-            📍 <span id="location-text">Getting your location...</span>
+            📍 <span id="location-text">{% trans "Getting your location..." %}</span>
         </div>
 
         <!-- Chat Interface -->
@@ -176,13 +202,13 @@
             <div class="chat-messages" id="chat-messages">
                 <div class="message message-ai">
                     <div class="message-bubble">
-                        👋 <strong>Hello! I'm your AI First Response assistant.</strong><br>
-                        I'm here to help you with emergencies and provide safety instructions.<br><br>
-                        <strong>Tell me what's happening:</strong><br>
-                        • Are you injured or in immediate danger?<br>
-                        • Is there a natural disaster (earthquake, fire, flood)?<br>
-                        • Do you need medical assistance?<br><br>
-                        Type your message below and I'll help you right away.
+                        👋 <strong>{% trans "Hello! I'm your AI First Response assistant." %}</strong><br>
+                        {% trans "I'm here to help you with emergencies and provide safety instructions." %}<br><br>
+                        <strong>{% trans "Tell me what's happening:" %}</strong><br>
+                        • {% trans "Are you injured or in immediate danger?" %}<br>
+                        • {% trans "Is there a natural disaster (earthquake, fire, flood)?" %}<br>
+                        • {% trans "Do you need medical assistance?" %}<br><br>
+                        {% trans "Type your message below and I'll help you right away." %}
                     </div>
                 </div>
             </div>
@@ -195,7 +221,7 @@
                 <span></span>
                 <span></span>
             </div>
-            <p class="mt-2 mb-0">AI is analyzing your emergency...</p>
+            <p class="mt-2 mb-0">{% trans "AI is analyzing your emergency..." %}</p>
         </div>
 
         <!-- Input Section -->
@@ -203,7 +229,7 @@
             <input type="text" 
                    class="form-control" 
                    id="message-input" 
-                   placeholder="Describe your emergency situation..."
+                   placeholder="{% trans 'Describe your emergency situation...' %}"
                    autocomplete="off">
             <button class="btn btn-emergency btn-send" type="button" id="send-btn" onclick="sendMessage()">
                 ➤
@@ -239,6 +265,24 @@
 
 {% block extra_js %}
 <script>
+// Translation strings for JavaScript
+const translations = {
+    'location_acquired': "{% trans 'Location acquired' %}",
+    'location_not_available': "{% trans 'Location not available - using default coordinates' %}",
+    'geolocation_not_supported': "{% trans 'Geolocation not supported - using default coordinates' %}",
+    'error': "{% trans 'Error' %}",
+    'server_error': "{% trans 'Server Error' %}",
+    'connection_error': "{% trans 'Connection Error' %}",
+    {% get_current_language as LANGUAGE_CODE %}
+    {% if LANGUAGE_CODE == 'it' %}
+    'connection_error_message': "{% trans 'Unable to reach emergency services. Please try again or call 112 directly.' %}",
+    'emergency_call_warning': "{% trans 'If this is a life-threatening emergency, call 112 immediately!' %}",
+    {% else %}
+    'connection_error_message': "Unable to reach emergency services. Please try again or call 911 directly.",
+    'emergency_call_warning': "If this is a life-threatening emergency, call 911 immediately!",
+    {% endif %}
+    'instructions': "{% trans 'Instructions' %}"
+};
 let userLat = null;
 let userLon = null;
 
@@ -261,18 +305,16 @@ function getUserLocation() {
                 userLat = position.coords.latitude;
                 userLon = position.coords.longitude;
                 document.getElementById('location-text').textContent = 
-                    `Location acquired: ${userLat.toFixed(4)}, ${userLon.toFixed(4)}`;
+                    `${translations.location_acquired}: ${userLat.toFixed(4)}, ${userLon.toFixed(4)}`;
             },
             function(error) {
-                document.getElementById('location-text').textContent = 
-                    'Location not available - using default coordinates';
+                document.getElementById('location-text').textContent = translations.location_not_available;
                 userLat = 45.0703; // Default to Turin, Italy
                 userLon = 7.6869;
             }
         );
     } else {
-        document.getElementById('location-text').textContent = 
-            'Geolocation not supported - using default coordinates';
+        document.getElementById('location-text').textContent = translations.geolocation_not_supported;
         userLat = 45.0703;
         userLon = 7.6869;
     }
@@ -326,7 +368,8 @@ async function sendMessage() {
         const requestBody = {
             message: message,
             lat: userLat || 45.0703,
-            lon: userLon || 7.6869
+            lon: userLon || 7.6869,
+            language: '{% get_current_language as CURRENT_LANG %}{{ CURRENT_LANG }}'
         };
         console.log('Request body:', requestBody);
         
@@ -350,13 +393,13 @@ async function sendMessage() {
         
         if (!response.ok) {
             console.error('HTTP Error:', response.status, response.statusText);
-            addMessage(`❌ <strong>Server Error:</strong> ${response.status} ${response.statusText}`, false, true);
+            addMessage(`❌ <strong>${translations.server_error}:</strong> ${response.status} ${response.statusText}`, false, true);
             return;
         }
         
         if (data.error) {
             console.error('API Error:', data.error);
-            addMessage(`❌ <strong>Error:</strong> ${data.error}`, false, true);
+            addMessage(`❌ <strong>${translations.error}:</strong> ${data.error}`, false, true);
         } else {
             // Format response based on severity
             const isEmergency = data.severity === 'CRIT' || data.severity === 'HIGH';
@@ -366,14 +409,14 @@ async function sendMessage() {
             let responseHtml = `${categoryIcon} <strong>${data.category}</strong> - ${severityIcon} ${data.severity}<br><br>`;
             
             if (data.instructions && data.instructions.length > 0) {
-                responseHtml += '<strong>Instructions:</strong><br>';
+                responseHtml += `<strong>${translations.instructions}:</strong><br>`;
                 data.instructions.forEach(instruction => {
                     responseHtml += `• ${instruction}<br>`;
                 });
             }
             
             if (isEmergency) {
-                responseHtml += '<br><strong>⚠️ If this is a life-threatening emergency, call 112 immediately!</strong>';
+                responseHtml += `<br><strong>⚠️ ${translations.emergency_call_warning}</strong>`;
             }
             
             addMessage(responseHtml, false, isEmergency);
@@ -381,7 +424,7 @@ async function sendMessage() {
         
     } catch (error) {
         showLoading(false);
-        addMessage('❌ <strong>Connection Error:</strong> Unable to reach emergency services. Please try again or call 112 directly.', false, true);
+        addMessage(`❌ <strong>${translations.connection_error}:</strong> ${translations.connection_error_message}`, false, true);
     }
 }
 

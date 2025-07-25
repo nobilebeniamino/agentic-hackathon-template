@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Admin Dashboard - AI First Response{% endblock %}
+{% block title %}{% trans "Admin Dashboard - AI First Response" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -92,8 +93,8 @@
 {% block content %}
 <div class="row">
     <div class="col-12 mb-4">
-        <h2>📊 Emergency Response Dashboard</h2>
-        <p class="text-muted">Real-time statistics and monitoring for emergency responses</p>
+        <h2>📊 {% trans "Emergency Response Dashboard" %}</h2>
+        <p class="text-muted">{% trans "Real-time statistics and monitoring for emergency responses" %}</p>
     </div>
 </div>
 
@@ -102,19 +103,19 @@
     <div class="col-md-3">
         <div class="stats-card">
             <h3 class="stats-number">{{ total_messages }}</h3>
-            <p class="stats-label">Total Messages</p>
+            <p class="stats-label">{% trans "Total Messages" %}</p>
         </div>
     </div>
     <div class="col-md-3">
         <div class="stats-card">
             <h3 class="stats-number">{{ messages_last_30_days }}</h3>
-            <p class="stats-label">Last 30 Days</p>
+            <p class="stats-label">{% trans "Last 30 Days" %}</p>
         </div>
     </div>
     <div class="col-md-3">
         <div class="stats-card critical">
             <h3 class="stats-number critical">{{ critical_messages }}</h3>
-            <p class="stats-label">Critical Emergencies</p>
+            <p class="stats-label">{% trans "Critical Emergencies" %}</p>
         </div>
     </div>
     <div class="col-md-3">
@@ -126,7 +127,7 @@
                     N/A
                 {% endif %}
             </h3>
-            <p class="stats-label">Avg Response Time</p>
+            <p class="stats-label">{% trans "Avg Response Time" %}</p>
         </div>
     </div>
 </div>
@@ -135,7 +136,7 @@
     <div class="col-md-3">
         <div class="stats-card warning">
             <h3 class="stats-number warning">{{ error_rate|floatformat:1 }}%</h3>
-            <p class="stats-label">Error Rate</p>
+            <p class="stats-label">{% trans "Error Rate" %}</p>
         </div>
     </div>
 </div>
@@ -144,13 +145,13 @@
 <div class="row">
     <div class="col-md-6">
         <div class="chart-container">
-            <h5>📈 Messages by Severity</h5>
+            <h5>📈 {% trans "Messages by Severity" %}</h5>
             <canvas id="severityChart" width="400" height="200"></canvas>
         </div>
     </div>
     <div class="col-md-6">
         <div class="chart-container">
-            <h5>🏷️ Top Emergency Categories</h5>
+            <h5>🏷️ {% trans "Top Emergency Categories" %}</h5>
             <canvas id="categoryChart" width="400" height="200"></canvas>
         </div>
     </div>
@@ -159,7 +160,7 @@
 <div class="row">
     <div class="col-12">
         <div class="chart-container daily-chart">
-            <h5>📅 Daily Messages (Last 30 Days)</h5>
+            <h5>📅 {% trans "Daily Messages (Last 30 Days)" %}</h5>
             <canvas id="dailyChart" width="800" height="300"></canvas>
         </div>
     </div>
@@ -169,17 +170,17 @@
 <div class="row">
     <div class="col-12">
         <div class="table-container">
-            <h5>🚨 Recent Critical Messages</h5>
+            <h5>🚨 {% trans "Recent Critical Messages" %}</h5>
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Time</th>
-                            <th>Category</th>
-                            <th>Severity</th>
-                            <th>Message</th>
-                            <th>Location</th>
-                            <th>Response Time</th>
+                            <th>{% trans "Time" %}</th>
+                            <th>{% trans "Category" %}</th>
+                            <th>{% trans "Severity" %}</th>
+                            <th>{% trans "Message" %}</th>
+                            <th>{% trans "Location" %}</th>
+                            <th>{% trans "Response Time" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -198,7 +199,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No critical messages yet</td>
+                            <td colspan="6" class="text-center text-muted">{% trans "No critical messages yet" %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

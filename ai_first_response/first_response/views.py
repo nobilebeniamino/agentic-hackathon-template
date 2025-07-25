@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.conf import settings
 from django.utils import timezone
+from django.utils.translation import get_language
 from .models import EmergencyCategory, ReceivedMessage
 from .responders import classify_message
 from .disaster_feeds import recent_quakes, gdacs_events
@@ -16,8 +17,16 @@ from datetime import datetime, timedelta
 
 def dashboard(request):
     """Render the emergency chat dashboard"""
-    # Get active emergency categories ordered by display order
-    categories = EmergencyCategory.objects.filter(is_active=True).order_by('order', 'title')
+    # Get current language
+    current_language = get_language()
+    
+    # Filter categories based on language
+    # English categories have order 1-99, Italian categories have order 100+
+    if current_language == 'it':
+        categories = EmergencyCategory.objects.filter(is_active=True, order__gte=100).order_by('order', 'title')
+    else:
+        categories = EmergencyCategory.objects.filter(is_active=True, order__lt=100).order_by('order', 'title')
+    
     context = {
         'emergency_categories': categories
     }
@@ -54,6 +63,7 @@ def first_response(request):
         msg = payload.get('message')
         lat = payload.get('lat')
         lon = payload.get('lon')
+        frontend_lang = payload.get('language')  # Language from frontend
         
         # Validate required fields
         if not msg:
@@ -105,9 +115,39 @@ def first_response(request):
     try:
         # Optionally fetch external feed based on initial message classification
         feed_snippet = ''
+        
+        # Detect user's preferred language from multiple sources
+        user_lang = None
+        
+        # Priority 1: Language from frontend (most reliable)
+        if frontend_lang:
+            user_lang = frontend_lang
+            print(f"Using frontend language: {user_lang}")
+        
+        # Priority 2: Try to get language from Django session
+        elif hasattr(request, 'session') and 'django_language' in request.session:
+            user_lang = request.session['django_language']
+            print(f"Using session language: {user_lang}")
+        
+        # Priority 3: Fallback to checking cookies
+        elif 'django_language' in request.COOKIES:
+            user_lang = request.COOKIES['django_language']
+            print(f"Using cookie language: {user_lang}")
+        
+        # Priority 4: Fallback to Accept-Language header
+        else:
+            accept_lang = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+            if 'it' in accept_lang.lower():
+                user_lang = 'it'
+            else:
+                user_lang = 'en'
+            print(f"Using Accept-Language header: {user_lang}")
+        
+        print(f"Final detected user language: {user_lang}")
+        
         # classify raw message first
         print(msg)
-        classification = classify_message(msg, lat, lon)
+        classification = classify_message(msg, lat, lon, user_lang=user_lang)
         print(classification)
         category = classification.get('category', '').upper()
 
@@ -127,7 +167,7 @@ def first_response(request):
                     else:
                         feed_snippet = ''
                 # re-classify with feed context
-                classification = classify_message(msg, lat, lon, feed_snippet)
+                classification = classify_message(msg, lat, lon, feed_snippet, user_lang=user_lang)
                 print(f"Re-classified with feed: {classification}")
             except Exception as feed_error:
                 print(f"Error fetching external feeds: {feed_error}")

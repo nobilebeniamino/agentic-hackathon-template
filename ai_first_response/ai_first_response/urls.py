@@ -17,12 +17,23 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
+from django.conf.urls.i18n import i18n_patterns
+from django.utils.translation import get_language
+from first_response.urls import api_urlpatterns
 
 def home_redirect(request):
-    return redirect('/dashboard/')
+    # Redirect to dashboard (will be automatically prefixed with language)
+    return redirect('dashboard')
 
 urlpatterns = [
-    path('', home_redirect, name='home'),
     path('admin/', admin.site.urls),
-    path('', include('first_response.urls')),
+    path('i18n/', include('django.conf.urls.i18n')),
+    # API endpoints outside i18n patterns (no language prefix)
+    path('api/', include(api_urlpatterns)),
 ]
+
+urlpatterns += i18n_patterns(
+    path('', home_redirect, name='home'),
+    path('dashboard/', include('first_response.urls')),
+    prefix_default_language=True
+)
