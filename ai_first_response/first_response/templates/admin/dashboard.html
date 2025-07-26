@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load l10n %}
 
 {% block title %}{% trans "Admin Dashboard - AI First Response" %}{% endblock %}
 
@@ -155,6 +156,83 @@
         font-style: italic;
         padding: 2rem;
     }
+    
+    /* Google Maps Modal Styles */
+    .location-link {
+        color: #007bff;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.2s ease;
+        font-weight: bold;
+    }
+    
+    .location-link:hover {
+        color: #0056b3;
+        text-decoration: underline;
+    }
+
+    .map-modal .modal-dialog {
+        max-width: 90%;
+        height: 90%;
+    }
+    
+    .map-modal .modal-content {
+        height: 100%;
+    }
+    
+    .map-modal .modal-body {
+        padding: 0;
+        height: calc(100% - 120px);
+    }
+    
+    #google-map {
+        width: 100%;
+        height: 100%;
+        min-height: 500px;
+    }
+        color: #007bff;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+    
+    .location-link:hover {
+        color: #0056b3;
+        text-decoration: none;
+    }
+    
+    .map-modal .modal-body {
+        padding: 0;
+        height: 500px;
+    }
+    
+    .map-container {
+        width: 100%;
+        height: 100%;
+        border-radius: 0.375rem;
+    }
+    
+    .map-info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        max-width: 300px;
+    }
+    
+    .map-info h6 {
+        margin: 0 0 5px 0;
+        color: #333;
+    }
+    
+    .map-info p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #666;
+    }
 </style>
 {% endblock %}
 
@@ -277,7 +355,16 @@
                                 </span>
                             </td>
                             <td>{{ msg.user_message|truncatechars:50 }}</td>
-                            <td>{{ msg.location_display }}</td>
+                            <td>
+                                {% if msg.user_latitude and msg.user_longitude %}
+                                    <a href="#" class="location-link" 
+                                       onclick="openMapModal({{ msg.user_latitude|unlocalize }}, {{ msg.user_longitude|unlocalize }}, '{{ msg.ai_category|default:"Emergency"|escapejs }}', '{{ msg.user_message|truncatechars:50|escapejs }}'); return false;">
+                                        {{ msg.location_display }}
+                                    </a>
+                                {% else %}
+                                    {% trans "Unknown" %}
+                                {% endif %}
+                            </td>
                             <td>{{ msg.processing_time_display }}</td>
                         </tr>
                         {% empty %}
@@ -287,6 +374,28 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Google Maps Modal -->
+<div class="modal fade map-modal" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mapModalLabel">🗺️ {% trans "Emergency Location" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="google-map"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="map-info" id="map-info">
+                    <p><strong>{% trans "Coordinates" %}:</strong> <span id="map-coordinates"></span></p>
+                    <p><strong>{% trans "Details" %}:</strong> <span id="map-details"></span></p>
+                </div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
             </div>
         </div>
     </div>
@@ -446,7 +555,11 @@ function updateAlertsDisplay(data) {
                         ${categoryIcon} {% trans "Emergency Cluster" %}: ${alert.category}
                     </div>
                     <div class="alert-details">
-                        <strong>📍 {% trans "Location" %}:</strong> ${alert.center_lat.toFixed(4)}, ${alert.center_lon.toFixed(4)}<br>
+                        <strong>📍 {% trans "Location" %}:</strong> 
+                        <a href="#" class="location-link" 
+                           onclick="openMapModal(${alert.center_lat}, ${alert.center_lon}, '${alert.category} {% trans "Cluster" %}', '${alert.count} {% trans "events" %}')">
+                            ${alert.center_lat.toFixed(4)}, ${alert.center_lon.toFixed(4)}
+                        </a><br>
                         <strong>📊 {% trans "Count" %}:</strong> ${alert.count} {% trans "events in" %} ${alert.radius_km}km {% trans "radius" %}<br>
                         <strong>⚠️ {% trans "Severity" %}:</strong> ${alert.dominant_severity}<br>
                         <strong>⏰ {% trans "Time span" %}:</strong> ${timeSpan} {% trans "hours" %}<br>
@@ -471,7 +584,7 @@ function updateAlertsDisplay(data) {
     } else {
         // Error
         alertStatus.textContent = '{% trans "Error" %}';
-        alertStatus.style.background = '#dc3545';
+        alertStatus.style.background = '#dc3545';	45.5115, 9.3290
         alertsList.innerHTML = `
             <div class="no-alerts">
                 <p>❌ {% trans "Error loading alerts" %}: ${data.error || '{% trans "Unknown error" %}'}</p>
@@ -507,6 +620,136 @@ window.addEventListener('beforeunload', function() {
     if (alertsPollingInterval) {
         clearInterval(alertsPollingInterval);
     }
+});
+
+// Google Maps functionality
+let map;
+let marker;
+let currentInfoWindow; // Track current info window to close it when opening a new one
+
+function initGoogleMap() {
+    // Initialize map with a default center (Rome, Italy)
+    const defaultCenter = { lat: 41.9028, lng: 12.4964 };
+    
+    map = new google.maps.Map(document.getElementById('google-map'), {
+        zoom: 13,
+        center: defaultCenter,
+        mapTypeId: google.maps.MapTypeId.ROADMAP  // Changed from HYBRID to ROADMAP
+    });
+    
+    marker = new google.maps.Marker({
+        map: map,
+        draggable: false
+    });
+}
+
+function openMapModal(lat, lng, title, details) {
+    // Parse coordinates to ensure they are numbers
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    
+    // Validate coordinates
+    if (isNaN(latitude) || isNaN(longitude)) {
+        alert('Coordinate non valide: ' + lat + ', ' + lng);
+        return;
+    }
+    
+    console.log('Opening map modal with coordinates:', latitude, longitude);
+    
+    // Update modal content
+    document.getElementById('map-coordinates').textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    document.getElementById('map-details').textContent = details;
+    
+    // Show the modal
+    const mapModal = new bootstrap.Modal(document.getElementById('mapModal'));
+    mapModal.show();
+    
+    // Wait for modal to be shown, then update map
+    document.getElementById('mapModal').addEventListener('shown.bs.modal', function() {
+        if (map) {
+            const position = { lat: latitude, lng: longitude };
+            
+            // Close previous info window if exists
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+            }
+            
+            // Center map on location
+            map.setCenter(position);
+            map.setZoom(15);
+            
+            // Update marker
+            marker.setPosition(position);
+            marker.setTitle(title);
+            
+            // Create enhanced info window with better styling
+            currentInfoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="padding: 15px; max-width: 300px; font-family: 'Segoe UI', sans-serif;">
+                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 1.2em; margin-right: 8px;">🚨</span>
+                            <h6 style="margin: 0; color: #dc3545; font-weight: bold;">${title}</h6>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #dc3545;">
+                            <p style="margin: 0; font-size: 0.9rem; color: #333; line-height: 1.4;">${details}</p>
+                        </div>
+                        <div style="display: flex; align-items: center; color: #666; font-size: 0.8rem;">
+                            <span style="margin-right: 5px;">📍</span>
+                            <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; border-radius: 4px;">
+                                ${latitude.toFixed(6)}, ${longitude.toFixed(6)}
+                            </span>
+                        </div>
+                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #dee2e6;">
+                            <small style="color: #6c757d;">
+                                ⏰ ${new Date().toLocaleString('it-IT')}
+                            </small>
+                        </div>
+                    </div>
+                `,
+                pixelOffset: new google.maps.Size(0, -10)
+            });
+            
+            currentInfoWindow.open(map, marker);
+            
+            // Trigger map resize to ensure proper rendering
+            google.maps.event.trigger(map, 'resize');
+        } else {
+            console.error('Google Maps not initialized');
+        }
+    }, { once: true });
+}
+
+// Load Google Maps API when page loads
+function loadGoogleMapsScript() {
+    const apiKey = '{{ google_maps_api_key }}';
+    if (apiKey && apiKey !== 'AIzaSyD5g_google_demo_key_replace_with_real') {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initGoogleMap`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+    } else {
+        console.warn('Google Maps API key not configured. Map functionality will be limited.');
+        // Initialize a simple map without API key (will show development mode)
+        setTimeout(() => {
+            if (typeof google !== 'undefined') {
+                initGoogleMap();
+            }
+        }, 1000);
+    }
+}
+
+// Initialize Google Maps when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    loadGoogleMapsScript();
+    
+    // Add event listener to clean up when modal is hidden
+    document.getElementById('mapModal').addEventListener('hidden.bs.modal', function() {
+        if (currentInfoWindow) {
+            currentInfoWindow.close();
+            currentInfoWindow = null;
+        }
+    });
 });
 </script>
 {% endblock %}

@@ -158,3 +158,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Google Maps API Key for emergency location mapping
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyCBeDJBUZLAgfhoAe7tH4zlI71IUKJU7EI")  # Placeholder key for demo

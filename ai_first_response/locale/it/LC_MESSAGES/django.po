@@ -332,6 +332,31 @@ msgstr "Errore nel caricamento allarmi"
 msgid "Unknown error"
 msgstr "Errore sconosciuto"
 
+# Google Maps Modal translations
+msgid "Emergency Location"
+msgstr "Posizione Emergenza"
+
+msgid "Coordinates"
+msgstr "Coordinate"
+
+msgid "Details"
+msgstr "Dettagli"
+
+msgid "Close"
+msgstr "Chiudi"
+
+msgid "Emergency"
+msgstr "Emergenza"
+
+msgid "Cluster"
+msgstr "Cluster"
+
+msgid "events"
+msgstr "eventi"
+
+msgid "Unknown"
+msgstr "Sconosciuto"
+
 #~ msgid "I'm not sure, please call 112."
 #~ msgstr "Non sono sicuro, chiama il 112."
 

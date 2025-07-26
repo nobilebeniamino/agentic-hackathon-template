@@ -314,6 +314,7 @@ def admin_dashboard(request):
         'daily_stats': daily_stats,
         'hourly_stats': hourly_stats,
         'recent_critical': recent_critical,
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     
     return render(request, 'admin/dashboard.html', context)
