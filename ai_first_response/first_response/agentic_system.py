@@ -64,7 +64,8 @@ class AgenticEmergencySystem:
                 message=message,
                 location={'lat': latitude, 'lon': longitude},
                 severity=classification.get('severity', 'UNKNOWN'),
-                category=classification.get('category', 'UNKNOWN')
+                category=classification.get('category', 'UNKNOWN'),
+                language=user_language or 'en'
             )
             
             # Step 5: Execute the plan
@@ -191,7 +192,7 @@ class AgenticEmergencySystem:
     
     def _merge_instructions(self, basic_instructions: list, plan: Dict, 
                           execution_log: Dict) -> list:
-        """Merge basic instructions with agentic plan insights"""
+        """Merge basic instructions with citizen-focused agentic plan insights"""
         
         enhanced_instructions = basic_instructions.copy()
         
@@ -199,22 +200,30 @@ class AgenticEmergencySystem:
         if len(enhanced_instructions) > 3:
             enhanced_instructions = enhanced_instructions[:3]
         
-        # Add high-priority immediate actions from plan (max 2)
+        # Add high-priority citizen-focused actions from plan (max 2)
         immediate_actions = plan.get('immediate_actions', [])
-        priority_actions = sorted(immediate_actions, key=lambda x: x.get('priority', 0), reverse=True)[:2]
+        
+        # Filter for citizen-appropriate actions and sort by priority
+        citizen_actions = [
+            action for action in immediate_actions 
+            if self._is_citizen_appropriate_action(action.get('action', ''))
+        ]
+        priority_actions = sorted(citizen_actions, key=lambda x: x.get('priority', 0), reverse=True)[:2]
+        
         for action in priority_actions:
             enhanced_instructions.append(f"🔥 Priority Action: {action.get('action')}")
         
-        # Add successful execution insights (max 3, unique summaries only)
+        # Add successful execution insights (only meaningful ones)
         added_summaries = set()
         execution_count = 0
         for exec_result in execution_log.get('executed_actions', []):
-            if execution_count >= 3:  # Limit to 3 system analyses
+            if execution_count >= 2:  # Limit to 2 system analyses max
                 break
             if exec_result.get('status') == 'completed' and exec_result.get('result'):
                 result = exec_result.get('result', {})
                 summary = result.get('summary')
-                if summary and summary not in added_summaries:
+                # Only add meaningful summaries (not None or generic messages)
+                if summary and summary not in added_summaries and self._is_meaningful_summary(summary):
                     enhanced_instructions.append(f"✅ System Analysis: {summary}")
                     added_summaries.add(summary)
                     execution_count += 1
@@ -224,6 +233,43 @@ class AgenticEmergencySystem:
             enhanced_instructions = enhanced_instructions[:8]
         
         return enhanced_instructions
+    
+    def _is_citizen_appropriate_action(self, action: str) -> bool:
+        """Check if an action is appropriate for individual citizens"""
+        
+        # Convert to lowercase for checking
+        action_lower = action.lower()
+        
+        # Actions that are NOT appropriate for citizens (institutional/professional)
+        institutional_keywords = [
+            'activate emergency protocols', 'issue public announcements', 
+            'coordinate with authorities', 'deploy resources', 'notify agencies',
+            'activate response plan', 'issue safety announcement', 'alert emergency services',
+            'coordinate response', 'establish command', 'deploy personnel',
+            'activate sirens', 'broadcast alerts', 'mobilize teams'
+        ]
+        
+        # Check if action contains institutional keywords
+        for keyword in institutional_keywords:
+            if keyword in action_lower:
+                return False
+        
+        # Actions that ARE appropriate for citizens
+        citizen_keywords = [
+            'call 112', 'call emergency', 'move to safety', 'seek shelter', 
+            'evacuate', 'gather supplies', 'check on neighbors', 'stay updated',
+            'listen to radio', 'follow instructions', 'prepare emergency kit',
+            'stay calm', 'help others', 'document damage', 'avoid area',
+            'take cover', 'drop and cover', 'exit building', 'find safe location'
+        ]
+        
+        # Prefer actions with citizen keywords
+        for keyword in citizen_keywords:
+            if keyword in action_lower:
+                return True
+        
+        # Default: allow if not clearly institutional
+        return True
     
     def _assess_plan_completeness(self, plan: Dict) -> str:
         """Assess how complete the generated plan is"""
@@ -272,3 +318,37 @@ class AgenticEmergencySystem:
             'version': '1.0-agentic',
             'architecture': 'planner_executor_memory'
         }
+    
+    def _is_meaningful_summary(self, summary: str) -> bool:
+        """Check if a system analysis summary is meaningful to show to users"""
+        
+        if not summary or summary.strip() == '':
+            return False
+        
+        # Filter out generic/technical messages that aren't useful for citizens
+        generic_phrases = [
+            'Action analyzed and executed',
+            'Generated instruction steps',
+            'Weather data would be fetched',
+            'Found nearby emergency resources',
+            'Simulated weather check',
+            'Action analyzed with AI'
+        ]
+        
+        summary_lower = summary.lower()
+        for phrase in generic_phrases:
+            if phrase.lower() in summary_lower:
+                return False
+        
+        # Keep meaningful disaster-related summaries
+        meaningful_keywords = [
+            'disaster', 'active', 'detected', 'area', 'earthquake', 
+            'flood', 'fire', 'emergency', 'alert', 'warning'
+        ]
+        
+        for keyword in meaningful_keywords:
+            if keyword.lower() in summary_lower:
+                return True
+        
+        # Default: don't show unless clearly meaningful
+        return False

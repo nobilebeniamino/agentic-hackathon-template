@@ -22,7 +22,7 @@ class EmergencyPlanner:
     def __init__(self):
         self.model = genai.GenerativeModel('gemini-1.5-flash')
     
-    def plan_response(self, message: str, location: Dict[str, float], severity: str, category: str) -> List[Dict]:
+    def plan_response(self, message: str, location: Dict[str, float], severity: str, category: str, language: str = "en") -> List[Dict]:
         """
         Plan a comprehensive emergency response by breaking down into sub-tasks
         
@@ -31,13 +31,23 @@ class EmergencyPlanner:
             location: Dict with 'lat' and 'lon' keys
             severity: Emergency severity level
             category: Emergency category
+            language: User's preferred language (en/it)
             
         Returns:
             List of planned tasks with priorities and actions
         """
         
+        # Language instruction based on user preference
+        language_instruction = ""
+        if language == "it":
+            language_instruction = "IMPORTANT: Respond in ITALIAN. All action descriptions must be in Italian."
+        else:
+            language_instruction = "IMPORTANT: Respond in ENGLISH. All action descriptions must be in English."
+        
         planning_prompt = f"""
-You are an Emergency Response Planner Agent. Your role is to decompose emergency situations into actionable sub-tasks.
+You are an Emergency Response Planner Agent. Your role is to create actionable emergency plans for INDIVIDUAL CITIZENS, not emergency operators.
+
+{language_instruction}
 
 EMERGENCY DETAILS:
 - Message: "{message}"
@@ -45,13 +55,14 @@ EMERGENCY DETAILS:
 - Severity: {severity}
 - Category: {category}
 
-Create a comprehensive response plan as JSON with the following structure:
+Create a comprehensive response plan as JSON focused on INDIVIDUAL CITIZEN ACTIONS:
+
 {{
     "immediate_actions": [
-        {{"action": "...", "priority": 1-10, "estimated_time": "...", "responsible": "..."}}
+        {{"action": "...", "priority": 1-10, "estimated_time": "...", "responsible": "citizen"}}
     ],
     "followup_actions": [
-        {{"action": "...", "priority": 1-10, "estimated_time": "...", "responsible": "..."}}
+        {{"action": "...", "priority": 1-10, "estimated_time": "...", "responsible": "citizen"}}
     ],
     "resources_needed": [
         {{"resource": "...", "quantity": "...", "urgency": "..."}}
@@ -61,8 +72,27 @@ Create a comprehensive response plan as JSON with the following structure:
     ]
 }}
 
-Prioritize life-safety first, then property protection, then recovery.
-Consider local emergency services, weather conditions, and available resources.
+GUIDELINES:
+- Focus on actions an individual person can take (not emergency services or authorities)
+- Prioritize personal safety and immediate protective actions
+- Include practical steps like "call emergency services", "move to safety", "gather supplies"
+- Avoid institutional actions like "issue public announcements" or "activate emergency protocols"
+- Think from the perspective of someone asking "What should I do right now?"
+- Include specific, actionable steps with clear timelines
+- Consider available resources a typical citizen would have
+
+Examples of GOOD actions:
+- "Call 112 immediately to report the emergency"
+- "Move to higher ground away from potential flooding"
+- "Check on elderly neighbors and offer assistance"
+- "Gather emergency supplies (water, first aid kit, flashlight)"
+- "Stay updated via official emergency radio/TV broadcasts"
+
+Examples of BAD actions (avoid these):
+- "Activate emergency response protocols"
+- "Issue public safety announcements"
+- "Coordinate with civil protection agencies"
+- "Deploy emergency resources"
 """
 
         try:

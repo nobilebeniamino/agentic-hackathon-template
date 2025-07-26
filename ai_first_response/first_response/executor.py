@@ -146,24 +146,41 @@ class EmergencyExecutor:
         try:
             lat = context.get('location', {}).get('lat', 0)
             lon = context.get('location', {}).get('lon', 0)
+            language = context.get('user_language', 'en')
             
             # Use existing disaster feed function
             feed_data = get_disaster_feed(lat, lon)
             
+            if feed_data and feed_data.strip():
+                disaster_count = len([x for x in feed_data.split(';') if x.strip()])
+                if language == 'it':
+                    summary = f"⚠️ {disaster_count} disastro/i attivo/i rilevato/i nella tua area"
+                else:
+                    summary = f"⚠️ {disaster_count} active disaster(s) detected in your area"
+            else:
+                if language == 'it':
+                    summary = "✅ Nessun disastro attivo rilevato nella tua area"
+                else:
+                    summary = "✅ No active disasters currently detected in your area"
+            
             return {
                 'tool': 'disaster_feed',
                 'data': feed_data,
-                'summary': f"Found {len(feed_data.split(';')) if feed_data else 0} active disasters in area"
+                'summary': summary
             }
         except Exception as e:
-            return {'error': str(e), 'tool': 'disaster_feed'}
+            return {
+                'tool': 'disaster_feed',
+                'error': str(e),
+                'summary': "Unable to check disaster feed data"
+            }
     
     def _check_weather_conditions(self, context: Dict) -> Dict:
         """Simulate weather check (placeholder for real weather API)"""
         return {
             'tool': 'weather_check',
             'conditions': 'current weather conditions simulated',
-            'summary': 'Weather data would be fetched from real API in production'
+            'summary': None  # Don't show weather placeholder in final response
         }
     
     def _lookup_resources(self, context: Dict) -> Dict:
@@ -220,7 +237,7 @@ Provide detailed, step-by-step instructions in JSON format:
             return {
                 'tool': 'gemini_instructions',
                 'instructions': instructions,
-                'summary': f"Generated {len(instructions.get('steps', []))} instruction steps"
+                'summary': None  # Don't show instruction count in final response
             }
             
         except Exception as e:
@@ -277,7 +294,7 @@ Provide reasoning and execution outcome in JSON:
             return {
                 'tool': 'gemini_reasoning',
                 'reasoning': reasoning,
-                'summary': 'Action analyzed and executed with AI reasoning'
+                'summary': None  # Don't show generic reasoning message
             }
             
         except Exception as e:
