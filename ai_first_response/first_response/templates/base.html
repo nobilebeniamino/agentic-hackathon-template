@@ -15,31 +15,58 @@
 </head>
 <body>
     <!-- Emergency Header -->
-    <header class="emergency-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h1>🚨 {% trans "AI First Response" %}</h1>
-                    <p class="emergency-subtitle mb-0">{% trans "Emergency Digital Assistant - Always Here to Help" %}</p>
+    <header class="emergency-header py-2">
+        <div class="container-fluid px-3">
+            <div class="row align-items-center g-2">
+                <!-- Logo e titolo più compatti -->
+                <div class="col-12 col-md-4 text-center text-md-start">
+                    <h1 class="mb-0 h4">🚨 {% trans "AI First Response" %}</h1>
+                    <small class="text-muted">{% trans "Emergency Assistant" %}</small>
                 </div>
-                <div class="col-md-3 text-center">
-                    <span class="status-indicator status-online"></span>
-                    <small>{% trans "System Online" %}</small>
+                
+                <!-- Menu di navigazione centrale -->
+                <div class="col-12 col-md-4">
+                    <nav class="navbar navbar-expand p-0">
+                        <div class="navbar-nav d-flex justify-content-center w-100">
+                            <a class="nav-link px-2 py-1 {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                            href="{% url 'dashboard' %}">
+                                🏠 <span class="d-none d-sm-inline">{% trans "Dashboard" %}</span>
+                            </a>
+                            <a class="nav-link px-2 py-1 {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" 
+                            href="{% url 'admin_dashboard' %}">
+                                ⚙️ <span class="d-none d-sm-inline">{% trans "Admin" %}</span>
+                            </a>
+                            <a class="nav-link px-2 py-1 {% if request.resolver_match.url_name == 'system_dashboard' %}active{% endif %}" 
+                            href="{% url 'system_dashboard' %}">
+                                🤖 <span class="d-none d-sm-inline">{% trans "System" %}</span>
+                            </a>
+                        </div>
+                    </nav>
                 </div>
-                <div class="col-md-3 text-md-end">
-                    <!-- Language Selector -->
-                    <form action="{% url 'set_language' %}" method="post" class="d-inline">
-                        {% csrf_token %}
-                        <select name="language" onchange="this.form.submit()" class="form-select form-select-sm" style="width: auto; display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;">
-                            {% get_current_language as LANGUAGE_CODE %}
-                            {% get_available_languages as LANGUAGES %}
-                            {% for lang_code, lang_name in LANGUAGES %}
-                                <option value="{{ lang_code }}" {% if lang_code == LANGUAGE_CODE %}selected{% endif %} style="color: black;">
-                                    {{ lang_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </form>
+                
+                <!-- Status e lingua -->
+                <div class="col-12 col-md-4 text-center text-md-end">
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-end gap-2">
+                        <!-- Status indicator più piccolo -->
+                        <!-- <div class="text-center">
+                            <span class="status-indicator status-online"></span>
+                            <small class="d-block">{% trans "Online" %}</small>
+                        </div> -->
+                        
+                        <!-- Language Selector compatto -->
+                        <form action="{% url 'set_language' %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm language-selector">
+                                {% get_current_language as LANGUAGE_CODE %}
+                                {% get_available_languages as LANGUAGES %}
+                                {% for lang_code, lang_name in LANGUAGES %}
+                                    <option value="{{ lang_code }}" {% if lang_code == LANGUAGE_CODE %}selected{% endif %}>
+                                        {{ lang_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
