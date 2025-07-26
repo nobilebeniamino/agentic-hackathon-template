@@ -19,15 +19,21 @@ from django.urls import path, include
 from django.shortcuts import redirect
 from django.conf.urls.i18n import i18n_patterns
 from django.utils.translation import get_language
+from django.views.static import serve
 from django.conf import settings
 from django.conf.urls.static import static
 from first_response.urls import api_urlpatterns
+from first_response.health import health_check, readiness_check
 
 def home_redirect(request):
     # Redirect to dashboard (will be automatically prefixed with language)
     return redirect('dashboard')
 
 urlpatterns = [
+    # Health checks (no language prefix needed)
+    path('health/', health_check, name='health_check'),
+    path('ready/', readiness_check, name='readiness_check'),
+    path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}, name='media'),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
     # API endpoints outside i18n patterns (no language prefix)
@@ -40,6 +46,3 @@ urlpatterns += i18n_patterns(
     prefix_default_language=True
 )
 
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

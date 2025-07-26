@@ -221,7 +221,7 @@ def first_response(request):
             conversation_info = agentic_response.get('conversation', {})
             
             received_message.ai_category = category
-            received_message.ai_severity = severity
+            received_message.ai_severity = normalize_severity(severity)
             received_message.ai_instructions = instructions
             received_message.external_feed = feed_snippet
             received_message.response_time_ms = processing_time_ms
@@ -243,7 +243,7 @@ def first_response(request):
             # Update parent message if this is a follow-up and category/severity changed
             if parent_message and (conversation_info.get('severity_update') or conversation_info.get('category_update')):
                 if conversation_info.get('severity_update'):
-                    parent_message.ai_severity = conversation_info['severity_update']
+                    parent_message.ai_severity = normalize_severity(conversation_info['severity_update'])
                 if conversation_info.get('category_update'):
                     parent_message.ai_category = conversation_info['category_update']
                 parent_message.save()
@@ -512,7 +512,7 @@ def voice_message(request):
             user_ip=client_ip,
             session_key='',
             ai_category=classification_result.get('category', 'general'),
-            ai_severity=classification_result.get('severity', 'INFO'),
+            ai_severity=normalize_severity(classification_result.get('severity', 'INFO')),
             ai_instructions=classification_result.get('instructions', []),
             response_time_ms=int((time.time() - start_time) * 1000),
             processed_at=timezone.now()
@@ -997,3 +997,49 @@ def reset_agentic_metrics(request):
             "status": "error",
             "error": f"Failed to reset metrics: {str(e)}"
         }, status=500)
+
+# Helper function to normalize severity values
+def normalize_severity(severity_value):
+    """
+    Normalize severity values to ensure they fit the database constraint (max 4 chars)
+    and map common variations to standard values.
+    """
+    if not severity_value:
+        return 'INFO'
+    
+    severity = str(severity_value).upper().strip()
+    
+    # Map common variations to standard 4-char codes
+    severity_mapping = {
+        'CRITICAL': 'CRIT',
+        'HIGH': 'HIGH',
+        'MEDIUM': 'MED',
+        'LOW': 'LOW',
+        'INFORMATION': 'INFO',
+        'INFORMATIONAL': 'INFO',
+        'URGENT': 'HIGH',
+        'EMERGENCY': 'CRIT',
+        'MODERATE': 'MED',
+        'MINOR': 'LOW',
+        'UNKNOWN': 'INFO',
+        'ERROR': 'CRIT',
+        # Handle exact matches
+        'CRIT': 'CRIT',
+        'MED': 'MED',
+        'INFO': 'INFO'
+    }
+    
+    # Try exact mapping first
+    if severity in severity_mapping:
+        return severity_mapping[severity]
+    
+    # If no exact match, try to match by prefix
+    for key, value in severity_mapping.items():
+        if severity.startswith(key[:4]):
+            return value
+    
+    # Default fallback - truncate to 4 chars or return INFO
+    if len(severity) <= 4:
+        return severity
+    else:
+        return 'INFO'

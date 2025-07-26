@@ -1,5 +1,30 @@
-.venv
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.pyc
-__pycache__
+
+# Environment
+.venv
+.env
+env/
+venv/
+
+# Git
 .git
-media
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Development files
+README.md
+node_modules/
+
+# Keep media structure but not local content
+ai_first_response/media/*
+!ai_first_response/media/.gitkeep
