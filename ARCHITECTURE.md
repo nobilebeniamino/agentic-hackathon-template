@@ -92,7 +92,7 @@ The Emergency Memory provides contextual awareness and learning:
 
 ## Agentic Workflow
 
-The system processes each emergency through a complete agentic cycle:
+The system processes each emergency through a complete agentic cycle for both text and voice messages:
 
 1. **Context Gathering**: Collect user input + location + historical context
 2. **Initial Classification**: Basic emergency categorization using Gemini
@@ -101,6 +101,13 @@ The system processes each emergency through a complete agentic cycle:
 5. **Action Execution**: Execute plan using available tools and APIs
 6. **Memory Storage**: Store complete interaction for future learning
 7. **Response Generation**: Provide enhanced response with agentic insights
+
+### Voice Message Processing
+Voice messages follow the same agentic workflow with additional steps:
+- **Speech-to-Text**: Convert audio input to text using Web Speech API
+- **Agentic Processing**: Process transcribed text through full agentic pipeline  
+- **Text-to-Speech**: Convert enhanced agentic response to audio output
+- **Audio Filtering**: Remove technical "System Analysis" messages from voice responses
 
 ## Tool Integration
 

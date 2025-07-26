@@ -387,15 +387,29 @@ def voice_message(request):
         message_text = stt_result['text']
         print(f"Transcribed text: {message_text}")
         
-        # Process the message through the normal classification pipeline
+        # Process the message through the agentic emergency system
         lat = float(latitude) if latitude else 45.0703  # Default to Turin
         lon = float(longitude) if longitude else 7.6869
-        classification_result = classify_message(message_text, lat, lon, user_lang=language)
         
-        # Generate TTS response
+        # Use agentic system for voice messages too
+        agentic_system = AgenticEmergencySystem()
+        classification_result = agentic_system.process_emergency(
+            message=message_text,
+            latitude=lat,
+            longitude=lon,
+            user_language=language
+        )
+        
+        # Generate TTS response (handle agentic response structure)
         instructions = classification_result.get('instructions', ['Unable to process your request.'])
         if isinstance(instructions, list):
-            response_text = ' '.join(instructions)
+            # Filter out system analysis messages for TTS
+            clean_instructions = []
+            for instruction in instructions:
+                # Skip system analysis messages for voice output
+                if not instruction.startswith("✅ System Analysis:"):
+                    clean_instructions.append(instruction)
+            response_text = ' '.join(clean_instructions) if clean_instructions else 'Unable to process your request.'
         else:
             response_text = str(instructions)
         
@@ -403,7 +417,7 @@ def voice_message(request):
         tts_result = text_to_speech(response_text, language)
         print(f"TTS result: {tts_result}")
         
-        # Create received message record
+        # Create received message record (compatible with agentic response)
         received_message = ReceivedMessage.objects.create(
             user_message=message_text,
             message_text=message_text,
@@ -421,7 +435,7 @@ def voice_message(request):
             processed_at=timezone.now()
         )
         
-        # Prepare response
+        # Prepare response (compatible with agentic output)
         response_data = {
             "success": True,
             "message_id": str(received_message.id),
@@ -432,7 +446,8 @@ def voice_message(request):
             "response_time_ms": int((time.time() - start_time) * 1000),
             "audio_url": tts_result.get('audio_url') if tts_result.get('success') else None,
             "tts_success": tts_result.get('success', False),
-            "tts_error": tts_result.get('error') if not tts_result.get('success') else None
+            "tts_error": tts_result.get('error') if not tts_result.get('success') else None,
+            "agentic_enabled": classification_result.get('agentic_system', {}).get('enabled', False)
         }
         
         # Add disaster feeds if coordinates provided
