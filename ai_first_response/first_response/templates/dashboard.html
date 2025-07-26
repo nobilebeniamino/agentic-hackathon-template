@@ -134,59 +134,132 @@
                 <p class="mt-2 mb-0">{% trans "AI is analyzing your emergency..." %}</p>
             </div>
 
-            <!-- Input Section -->
-            <div class="input-group">
-                <input type="text" 
-                    class="form-control" 
-                    id="message-input" 
-                    placeholder="{% trans 'Describe your emergency situation...' %}"
-                    autocomplete="off">
-                <button class="btn btn-emergency btn-send" type="button" id="send-btn" onclick="sendMessage()">
-                    ➤
-                </button>
-            </div>
-            
-            <!-- Voice Controls -->
-            <div class="voice-controls">
-                <button class="btn btn-voice btn-record" id="record-btn" onclick="startRecording()" title="{% trans 'Start Recording' %}">
-                    🎤
-                </button>
-                <button class="btn btn-voice btn-stop" id="stop-btn" onclick="stopRecording()" style="display: none;" title="{% trans 'Stop Recording' %}">
-                    ⏹️
-                </button>
-                <button class="btn btn-voice btn-play" id="play-response-btn" onclick="playLastResponse()" style="display: none;" title="{% trans 'Play AI Response' %}">
-                    🔊
-                </button>
-                <div class="voice-status" id="voice-status">
-                    {% trans "Click the microphone to record a voice message" %}
+            <!-- Enhanced Input Section -->
+            <div class="input-section-enhanced">
+                <div class="input-container">
+                    <input type="text" 
+                        class="form-control-enhanced" 
+                        id="message-input" 
+                        placeholder="{% trans 'Describe your emergency situation...' %}"
+                        autocomplete="off">
+                    
+                    <!-- Voice button integrated in input -->
+                    <button class="btn-voice-integrated" 
+                            id="voice-btn" 
+                            onclick="toggleVoiceRecording()" 
+                            title="{% trans 'Voice Input' %}">
+                        <span id="voice-icon">🎤</span>
+                    </button>
+                    
+                    <!-- Send button -->
+                    <button class="btn-send-enhanced" 
+                            type="button" 
+                            id="send-btn" 
+                            onclick="sendMessage()"
+                            title="{% trans 'Send Message' %}">
+                        ➤
+                    </button>
                 </div>
-                <audio id="response-audio" class="audio-player" controls style="display: none;"></audio>
+                
+                <!-- Voice status indicator (compact) -->
+                <div class="voice-status-compact" id="voice-status-compact" style="display: none;">
+                    <div class="voice-indicator">
+                        <div class="voice-wave"></div>
+                        <div class="voice-wave"></div>
+                        <div class="voice-wave"></div>
+                    </div>
+                    <span id="voice-status-text">{% trans "Recording..." %}</span>
+                </div>
+                
+                <!-- Hidden audio element -->
+                <audio id="response-audio" class="audio-player" style="display: none;"></audio>
             </div>
             
-            <!-- Quick Actions -->
-            <div class="row mt-3">
-                {% for category in emergency_categories %}
-                    <div class="col-md-6">
-                        <button class="btn {{ category.css_class }} w-100 mb-2" 
-                                onclick="quickMessage('{{ category.quick_message|escapejs }}')">
-                            {{ category.icon }} {{ category.title }}
+            <!-- Quick Emergency Actions - Improved -->
+            <div class="quick-actions-container mt-3">
+                <h6 class="quick-actions-title mb-2">
+                    <span class="quick-actions-icon">⚡</span>
+                    {% trans "Quick Actions" %}
+                </h6>
+                
+                <div class="quick-actions-grid">
+                    {% for category in emergency_categories %}
+                        <button class="btn quick-action-btn {{ category.css_class }}" 
+                                onclick="quickMessage('{{ category.quick_message|escapejs }}')"
+                                data-category="{{ category.title }}">
+                            <span class="quick-icon">{{ category.icon }}</span>
+                            <span class="quick-text">{{ category.title }}</span>
                         </button>
-                    </div>
-                {% empty %}
-                    <!-- Fallback if no categories in database -->
-                    <div class="col-md-6">
-                        <button class="btn btn-outline-danger w-100 mb-2" onclick="quickMessage('There was an earthquake')">
-                            🏠 Earthquake
+                    {% empty %}
+                        <!-- Fallback buttons with improved design -->
+                        <button class="btn quick-action-btn btn-emergency-earthquake" 
+                                onclick="quickMessage('{% trans "There was an earthquake, I need help" %}')"
+                                data-category="Earthquake">
+                            <span class="quick-icon">🏠</span>
+                            <span class="quick-text">{% trans "Earthquake" %}</span>
                         </button>
-                    </div>
-                    <div class="col-md-6">
-                        <button class="btn btn-outline-danger w-100 mb-2" onclick="quickMessage('I need medical help')">
-                            🚑 Medical Emergency
+                        
+                        <button class="btn quick-action-btn btn-emergency-medical" 
+                                onclick="quickMessage('{% trans "I need medical help urgently" %}')"
+                                data-category="Medical">
+                            <span class="quick-icon">🚑</span>
+                            <span class="quick-text">{% trans "Medical" %}</span>
                         </button>
-                    </div>
-                {% endfor %}
+                        
+                        <button class="btn quick-action-btn btn-emergency-fire" 
+                                onclick="quickMessage('{% trans "There is a fire, I need help" %}')"
+                                data-category="Fire">
+                            <span class="quick-icon">🔥</span>
+                            <span class="quick-text">{% trans "Fire" %}</span>
+                        </button>
+                        
+                        <button class="btn quick-action-btn btn-emergency-police" 
+                                onclick="quickMessage('{% trans "I need police assistance" %}')"
+                                data-category="Police">
+                            <span class="quick-icon">👮</span>
+                            <span class="quick-text">{% trans "Police" %}</span>
+                        </button>
+                        
+                        <button class="btn quick-action-btn btn-emergency-flood" 
+                                onclick="quickMessage('{% trans "There is flooding, I need help" %}')"
+                                data-category="Flood">
+                            <span class="quick-icon">🌊</span>
+                            <span class="quick-text">{% trans "Flood" %}</span>
+                        </button>
+                        
+                        <button class="btn quick-action-btn btn-emergency-accident" 
+                                onclick="quickMessage('{% trans "There was an accident, people are injured" %}')"
+                                data-category="Accident">
+                            <span class="quick-icon">🚗</span>
+                            <span class="quick-text">{% trans "Accident" %}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+                
+                <!-- Additional Quick Actions Row -->
+                <div class="quick-actions-secondary mt-2">
+                    <button class="btn quick-action-btn-small btn-outline-secondary" 
+                            onclick="quickMessage('{% trans "I am safe but need assistance" %}')"
+                            title="{% trans 'I am safe but need help' %}">
+                        <span class="quick-icon-small">✅</span>
+                        <span class="quick-text-small">{% trans "Safe" %}</span>
+                    </button>
+                    
+                    <button class="btn quick-action-btn-small btn-outline-warning" 
+                            onclick="quickMessage('{% trans "I am trapped and cannot move" %}')"
+                            title="{% trans 'I am trapped' %}">
+                        <span class="quick-icon-small">🆘</span>
+                        <span class="quick-text-small">{% trans "Trapped" %}</span>
+                    </button>
+                    
+                    <button class="btn quick-action-btn-small btn-outline-info" 
+                            onclick="quickMessage('{% trans "I need information about what to do" %}')"
+                            title="{% trans 'I need information' %}">
+                        <span class="quick-icon-small">ℹ️</span>
+                        <span class="quick-text-small">{% trans "Info" %}</span>
+                    </button>
+                </div>
             </div>
-
         </div>
 
     </div>
@@ -859,5 +932,158 @@ function cancelFollowUp() {
         indicator.remove();
     }
 }
+
+// Enhanced voice recording functionality
+let recordedChunks = [];
+
+function toggleVoiceRecording() {
+    const voiceBtn = document.getElementById('voice-btn');
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceStatus = document.getElementById('voice-status-compact');
+    const voiceStatusText = document.getElementById('voice-status-text');
+    
+    if (!isRecording) {
+        startVoiceRecording();
+    } else {
+        stopVoiceRecording();
+    }
+}
+
+function startVoiceRecording() {
+    const voiceBtn = document.getElementById('voice-btn');
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceStatus = document.getElementById('voice-status-compact');
+    
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                isRecording = true;
+                
+                // Update UI
+                voiceBtn.classList.add('recording');
+                voiceIcon.textContent = '⏸️';
+                voiceStatus.style.display = 'flex';
+                document.getElementById('voice-status-text').textContent = '{% trans "Recording..." %}';
+                
+                // Start recording
+                mediaRecorder = new MediaRecorder(stream);
+                recordedChunks = [];
+                
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+                    processVoiceMessage(blob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+            })
+            .catch(error => {
+                console.error('Error accessing microphone:', error);
+                showVoiceError('{% trans "Microphone access denied" %}');
+            });
+    } else {
+        showVoiceError('{% trans "Voice recording not supported" %}');
+    }
+}
+
+function stopVoiceRecording() {
+    if (mediaRecorder && isRecording) {
+        isRecording = false;
+        mediaRecorder.stop();
+        
+        // Update UI
+        const voiceBtn = document.getElementById('voice-btn');
+        const voiceIcon = document.getElementById('voice-icon');
+        const voiceStatus = document.getElementById('voice-status-compact');
+        
+        voiceBtn.classList.remove('recording');
+        voiceBtn.classList.add('processing');
+        voiceIcon.textContent = '⚙️';
+        document.getElementById('voice-status-text').textContent = '{% trans "Processing..." %}';
+    }
+}
+
+function processVoiceMessage(audioBlob) {
+    const voiceBtn = document.getElementById('voice-btn');
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceStatus = document.getElementById('voice-status-compact');
+    
+    // Create FormData and send to server
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'voice_message.wav');
+    formData.append('language', '{% get_current_language as CURRENT_LANG %}{{ CURRENT_LANG }}');
+    formData.append('latitude', userLat || 45.0703);
+    formData.append('longitude', userLon || 7.6869);
+    
+    // Get CSRF token
+    const csrfToken = getCookie('csrftoken');
+    
+    fetch('/api/first-response/voice/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Voice processing response:', data);
+        
+        if (data.success) {
+            // Check different possible field names for transcription
+            const transcription = data.transcription || data.transcribed_text || data.text || '';
+            
+            if (transcription && transcription.trim()) {
+                // Add transcribed text to input
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = transcription;
+                
+                // Reset UI
+                resetVoiceUI();
+                
+                // Auto-send the transcribed message
+                sendMessage();
+            } else {
+                showVoiceError('{% trans "No transcription received" %}');
+            }
+        } else {
+            showVoiceError(data.error || '{% trans "Processing failed" %}');
+        }
+    })
+    .catch(error => {
+        console.error('Error processing voice:', error);
+        showVoiceError('{% trans "Network error" %}');
+    });
+}
+
+function showVoiceError(message) {
+    const voiceBtn = document.getElementById('voice-btn');
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceStatus = document.getElementById('voice-status-compact');
+    
+    voiceBtn.classList.remove('recording', 'processing');
+    voiceBtn.classList.add('error');
+    voiceIcon.textContent = '❌';
+    voiceStatus.style.display = 'flex';
+    document.getElementById('voice-status-text').textContent = message;
+    
+    // Reset after 3 seconds
+    setTimeout(resetVoiceUI, 3000);
+}
+
+function resetVoiceUI() {
+    const voiceBtn = document.getElementById('voice-btn');
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceStatus = document.getElementById('voice-status-compact');
+    
+    voiceBtn.classList.remove('recording', 'processing', 'error', 'ready');
+    voiceIcon.textContent = '🎤';
+    voiceStatus.style.display = 'none';
+    isRecording = false;
+}
+
 </script>
 {% endblock %}

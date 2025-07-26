@@ -379,6 +379,54 @@ msgstr "Errore riproduzione"
 msgid "No text to convert"
 msgstr "Nessun testo da convertire"
 
+msgid "Voice Input"
+msgstr "Input Vocale"
+
+msgid "Send Message"
+msgstr "Invia Messaggio"
+
+msgid "Recording..."
+msgstr "Registrazione..."
+
+msgid "Processing..."
+msgstr "Elaborazione..."
+
+msgid "Microphone access denied"
+msgstr "Accesso microfono negato"
+
+msgid "Voice recording not supported"
+msgstr "Registrazione vocale non supportata"
+
+msgid "Processing failed"
+msgstr "Elaborazione fallita"
+
+msgid "Network error"
+msgstr "Errore di rete"
+
+msgid "I am trapped and cannot move"
+msgstr "Sono intrappolato e non posso muovermi"
+
+msgid "I am trapped"
+msgstr "Sono intrappolato"
+
+msgid "Trapped"
+msgstr "Intrappolato"
+
+msgid "I am safe but need assistance"
+msgstr "Sto bene ma ho bisogno di aiuto"
+
+msgid "I am safe but need help"
+msgstr "Sto bene ma ho bisogno di aiuto"
+
+msgid "Safe"
+msgstr "Sto bene"
+
+msgid "I need information about what to do"
+msgstr "Ho bisogno di indicazioni su cosa fare"
+
+msgid "I need information"
+msgstr "Ho bisogno di indicazioni"
+
 #~ msgid "I'm not sure, please call 112."
 #~ msgstr "Non sono sicuro, chiama il 112."
 
