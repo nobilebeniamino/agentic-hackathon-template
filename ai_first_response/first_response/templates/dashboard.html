@@ -977,7 +977,7 @@ function startVoiceRecording() {
                 
                 mediaRecorder.onstop = function() {
                     const blob = new Blob(recordedChunks, { type: 'audio/wav' });
-                    processVoiceMessage(blob);
+                    sendVoiceMessage(blob);
                     stream.getTracks().forEach(track => track.stop());
                 };
                 
