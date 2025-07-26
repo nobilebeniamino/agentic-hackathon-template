@@ -265,8 +265,19 @@ def admin_dashboard(request):
         response_time_ms__isnull=False
     ).aggregate(avg_time=Avg('response_time_ms'))['avg_time']
     
-    # Messages by severity
-    severity_stats = ReceivedMessage.objects.values('ai_severity').annotate(
+    # Messages by severity - normalize to uppercase for consistency
+    from django.db.models import Case, When, Value, CharField
+    severity_stats = ReceivedMessage.objects.annotate(
+        normalized_severity=Case(
+            When(ai_severity__iexact='CRIT', then=Value('CRIT')),
+            When(ai_severity__iexact='HIGH', then=Value('HIGH')),
+            When(ai_severity__iexact='MED', then=Value('MED')),
+            When(ai_severity__iexact='LOW', then=Value('LOW')),
+            When(ai_severity__iexact='INFO', then=Value('INFO')),
+            default=Value('UNKNOWN'),
+            output_field=CharField()
+        )
+    ).values('normalized_severity').annotate(
         count=Count('id')
     ).order_by('-count')
     
@@ -620,3 +631,55 @@ def find_clusters(messages, radius_km, min_count):
             processed_indices.update(cluster_indices)
     
     return clusters
+
+@csrf_exempt
+def text_to_speech_api(request):
+    """Convert text to speech for dashboard responses"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "POST required"}, status=400)
+    
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '').strip()
+        language = data.get('language', 'en')
+        
+        if not text:
+            return JsonResponse({"error": "Text is required"}, status=400)
+        
+        # Clean the text (remove HTML tags and excessive whitespace)
+        import re
+        text = re.sub(r'<[^>]+>', '', text)  # Remove HTML tags
+        text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+        text = text.strip()
+        
+        if not text:
+            return JsonResponse({"error": "No valid text after cleaning"}, status=400)
+        
+        print(f"TTS API: Converting text to speech: '{text[:100]}...' in language: {language}")
+        
+        # Generate audio
+        audio_result = text_to_speech(text, language)
+        
+        if audio_result['success'] and audio_result['audio_url']:
+            print(f"TTS API: Audio generated successfully: {audio_result['audio_url']}")
+            
+            return JsonResponse({
+                "success": True,
+                "audio_url": audio_result['audio_url'],
+                "text": text[:100] + "..." if len(text) > 100 else text
+            })
+        else:
+            print(f"TTS API: Failed to generate audio: {audio_result.get('error', 'Unknown error')}")
+            return JsonResponse({
+                "success": False,
+                "error": audio_result.get('error', 'Failed to generate audio')
+            }, status=500)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        print(f"TTS API Error: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)

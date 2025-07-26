@@ -433,11 +433,34 @@ function addMessage(content, isUser = false, isEmergency = false) {
     messageDiv.className = `message ${isUser ? 'message-user' : 'message-ai'}`;
     
     const bubbleClass = isEmergency ? 'message-emergency' : '';
-    messageDiv.innerHTML = `
+    
+    // Create unique ID for each message
+    const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    
+    let messageContent = `
         <div class="message-bubble ${bubbleClass}">
             ${content}
-        </div>
     `;
+    
+    // Add listen button for AI messages
+    if (!isUser) {
+        messageContent += `
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-primary listen-btn" onclick="playResponseAudio('${messageId}', this)">
+                    <i class="fas fa-volume-up"></i> {% trans "Listen" %}
+                </button>
+                <span class="audio-status ms-2" id="status-${messageId}"></span>
+            </div>
+        `;
+    }
+    
+    messageContent += `</div>`;
+    messageDiv.innerHTML = messageContent;
+    
+    // Store the plain text content for TTS
+    if (!isUser) {
+        messageDiv.dataset.textContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    }
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -795,6 +818,70 @@ function playLastResponse() {
     } else {
         console.log('No audio URL available');
         document.getElementById('voice-status').textContent = "{% trans 'No audio response available' %}";
+    }
+}
+
+// Function to generate and play audio for any text response
+async function playResponseAudio(messageId, buttonElement) {
+    const statusElement = document.getElementById(`status-${messageId}`);
+    const messageElement = buttonElement.closest('.message');
+    const textContent = messageElement.dataset.textContent;
+    
+    if (!textContent) {
+        statusElement.textContent = "{% trans 'No text to convert' %}";
+        return;
+    }
+    
+    try {
+        // Update button state
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {% trans "Generating..." %}';
+        statusElement.textContent = "{% trans 'Generating audio...' %}";
+        
+        // Send request to TTS endpoint
+        const response = await fetch('/api/first-response/tts/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                text: textContent,
+                language: '{% get_current_language as CURRENT_LANG %}{{ CURRENT_LANG }}'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.audio_url) {
+            // Create and play audio
+            const audio = new Audio(data.audio_url);
+            
+            statusElement.textContent = "{% trans 'Playing...' %}";
+            
+            audio.onended = () => {
+                statusElement.textContent = "{% trans 'Finished' %}";
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = '<i class="fas fa-volume-up"></i> {% trans "Listen" %}';
+            };
+            
+            audio.onerror = () => {
+                statusElement.textContent = "{% trans 'Playback error' %}";
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = '<i class="fas fa-volume-up"></i> {% trans "Listen" %}';
+            };
+            
+            await audio.play();
+            
+        } else {
+            throw new Error(data.error || 'TTS generation failed');
+        }
+        
+    } catch (error) {
+        console.error('TTS Error:', error);
+        statusElement.textContent = `{% trans "Error" %}: ${error.message}`;
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = '<i class="fas fa-volume-up"></i> {% trans "Listen" %}';
     }
 }
 </script>

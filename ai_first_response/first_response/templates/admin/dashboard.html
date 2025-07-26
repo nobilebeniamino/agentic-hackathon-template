@@ -412,7 +412,7 @@ const severityChart = new Chart(severityCtx, {
     data: {
         labels: [
             {% for stat in severity_stats %}
-            '{{ stat.ai_severity|default:"Unknown" }}'{% if not forloop.last %},{% endif %}
+            '{{ stat.normalized_severity|default:"UNKNOWN" }}'{% if not forloop.last %},{% endif %}
             {% endfor %}
         ],
         datasets: [{
@@ -422,7 +422,15 @@ const severityChart = new Chart(severityCtx, {
                 {% endfor %}
             ],
             backgroundColor: [
-                '#dc3545', '#fd7e14', '#ffc107', '#17a2b8', '#6c757d'
+                // Map colors to severity levels consistently
+                {% for stat in severity_stats %}
+                {% if stat.normalized_severity == 'CRIT' %}'#dc3545'
+                {% elif stat.normalized_severity == 'HIGH' %}'#fd7e14'
+                {% elif stat.normalized_severity == 'MED' %}'#ffc107'
+                {% elif stat.normalized_severity == 'LOW' %}'#17a2b8'
+                {% elif stat.normalized_severity == 'INFO' %}'#6c757d'
+                {% else %}'#6c757d'{% endif %}{% if not forloop.last %},{% endif %}
+                {% endfor %}
             ]
         }]
     },

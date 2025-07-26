@@ -357,6 +357,28 @@ msgstr "eventi"
 msgid "Unknown"
 msgstr "Sconosciuto"
 
+# Text-to-Speech translations
+msgid "Listen"
+msgstr "Ascolta"
+
+msgid "Generating..."
+msgstr "Generando..."
+
+msgid "Generating audio..."
+msgstr "Generazione audio..."
+
+msgid "Playing..."
+msgstr "Riproduzione..."
+
+msgid "Finished"
+msgstr "Completato"
+
+msgid "Playback error"
+msgstr "Errore riproduzione"
+
+msgid "No text to convert"
+msgstr "Nessun testo da convertire"
+
 #~ msgid "I'm not sure, please call 112."
 #~ msgstr "Non sono sicuro, chiama il 112."
 
