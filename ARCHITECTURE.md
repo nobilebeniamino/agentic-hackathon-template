@@ -6,35 +6,35 @@ The Agentic Emergency Response System implements a comprehensive multi-agent arc
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    USER INTERFACE LAYER                        │
+│                    USER INTERFACE LAYER                         │
 ├─────────────────────┬─────────────────┬─────────────────────────┤
-│  User Dashboard     │  Admin Dashboard │  Voice/Text Interface   │
+│  User Dashboard     │  Admin Dashboard │  Voice/Text Interface  │
 │  (Bootstrap 5)      │  (Analytics)     │  (Multilingual)        │
 └─────────────────────┴─────────────────┴─────────────────────────┘
                                │
 ┌─────────────────────────────────────────────────────────────────┐
-│                    API GATEWAY LAYER                           │
+│                    API GATEWAY LAYER                            │
 ├─────────────────────┬─────────────────┬─────────────────────────┤
-│  Emergency API      │  Voice API       │  Agentic Status API     │
-│  /api/.../emergency │  /api/.../voice  │  /api/.../agentic/      │
+│  Emergency API      │  Voice API      │  Agentic Status API     │
+│  /api/.../emergency │  /api/.../voice │  /api/.../agentic/      │
 └─────────────────────┴─────────────────┴─────────────────────────┘
                                │
 ┌─────────────────────────────────────────────────────────────────┐
-│                AGENTIC EMERGENCY SYSTEM                        │
-│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐   │
-│  │    PLANNER      │ │    EXECUTOR     │ │     MEMORY      │   │
-│  │                 │ │                 │ │                 │   │
-│  │ • Task decomp   │ │ • Action exec   │ │ • Context store │   │
-│  │ • Priority mgmt │ │ • Tool calling  │ │ • Pattern learn │   │
-│  │ • Resource plan │ │ • API integr    │ │ • Situation awrn│   │
-│  │ • Risk assess  │ │ • Results track │ │ • Memory recall │   │
-│  └─────────────────┘ └─────────────────┘ └─────────────────┘   │
+│                AGENTIC EMERGENCY SYSTEM                         │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐    │
+│  │    PLANNER      │ │    EXECUTOR     │ │     MEMORY      │    │
+│  │                 │ │                 │ │                 │    │
+│  │ • Task decomp   │ │ • Action exec   │ │ • Context store │    │
+│  │ • Priority mgmt │ │ • Tool calling  │ │ • Pattern learn │    │
+│  │ • Resource plan │ │ • API integr    │ │ • Situation awrn│    │
+│  │ • Risk assess   │ │ • Results track │ │ • Memory recall │    │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
            │                    │                    │
 ┌─────────────────────────────────────────────────────────────────┐
-│                     TOOL INTEGRATION LAYER                     │
+│                     TOOL INTEGRATION LAYER                      │
 ├─────────────────────┬─────────────────┬─────────────────────────┤
-│  Gemini AI API      │  Disaster Feeds  │  Audio Processing       │
+│  Gemini AI API      │  Disaster Feeds  │  Audio Processing      │
 │  • Classification   │  • USGS/GDACS    │  • Speech-to-Text      │
 │  • Planning         │  • Real-time     │  • Text-to-Speech      │
 │  • Reasoning        │  • Geospatial    │  • Audio conversion    │
@@ -42,12 +42,12 @@ The Agentic Emergency Response System implements a comprehensive multi-agent arc
 └─────────────────────┴─────────────────┴─────────────────────────┘
            │                    │                    │
 ┌─────────────────────────────────────────────────────────────────┐
-│                     DATA PERSISTENCE LAYER                     │
+│                     DATA PERSISTENCE LAYER                      │
 ├─────────────────────┬─────────────────┬─────────────────────────┤
-│  Django ORM         │  Cache System    │  Media Storage          │
-│  • Emergency msgs   │  • Memory store  │  • Audio files         │
-│  • Categories       │  • Session data  │  • Response audio      │
-│  • Analytics        │  • Temp data     │  • User uploads        │
+│  Django ORM         │  Cache System   │  Media Storage          │
+│  • Emergency msgs   │  • Memory store │  • Audio files          │
+│  • Categories       │  • Session data │  • Response audio       │
+│  • Analytics        │  • Temp data    │  • User uploads         │
 └─────────────────────┴─────────────────┴─────────────────────────┘
 ```
 
@@ -89,6 +89,15 @@ The Emergency Memory provides contextual awareness and learning:
 - Effectiveness tracking and optimization
 - Situational awareness (geographic clustering, trends)
 - Feedback-based continuous learning
+
+## Infrastructure & Deployment
+
+### Google Cloud Platform Architecture
+- **Primary Hosting**: Google Cloud Run for containerized Django application
+- **Database**: Google Cloud SQL (PostgreSQL) for persistent data storage
+- **Static Assets**: Google Cloud Storage for static files and media
+- **Auto-scaling**: Cloud Run automatic scaling based on request load
+- **High Availability**: Multi-zone deployment with automatic failover
 
 ## Agentic Workflow
 

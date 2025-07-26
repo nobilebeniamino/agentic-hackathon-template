@@ -301,7 +301,6 @@ def first_response(request):
             "error": f"Processing error: {str(e)}"
         }, status=500)
 
-@staff_member_required
 def admin_dashboard(request):
     """Admin dashboard with statistics and charts"""
     # Get date range for filtering (last 30 days by default)
@@ -596,7 +595,6 @@ def _haversine_distance(lat1, lon1, lat2, lon2):
     return 2*R*math.asin(math.sqrt(a))
 
 
-@staff_member_required
 def emergency_alerts(request):
     """API endpoint to check for emergency clusters and return alerts"""
     try:
@@ -908,7 +906,6 @@ def agentic_memory_insights(request):
         }, status=500)
 
 
-@staff_member_required
 def disaster_feeds_cache_stats(request):
     """API endpoint to get disaster feeds cache statistics"""
     try:
@@ -947,7 +944,6 @@ def disaster_feeds_cache_stats(request):
         }, status=500)
 
 
-@staff_member_required
 def clear_disaster_feeds_cache(request):
     """API endpoint to clear disaster feeds cache"""
     if request.method != 'POST':
@@ -968,7 +964,6 @@ def clear_disaster_feeds_cache(request):
             "error": f"Cache clear error: {str(e)}"
         }, status=500)
 
-@staff_member_required
 def system_dashboard(request):
     """System dashboard for agentic AI status and cache monitoring"""
     context = {

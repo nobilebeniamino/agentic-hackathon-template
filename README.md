@@ -44,12 +44,14 @@ The system implements a complete agentic architecture with three core components
 - **📊 Real-time Analytics**: Emergency clustering, trend analysis, and performance metrics
 
 ### Technical Architecture
-- **Backend**: Django with PostgreSQL database
+- **Backend**: Django framework deployed on Google Cloud Run
+- **Database**: Google Cloud SQL (PostgreSQL) for data persistence  
 - **AI/ML**: Google Gemini 1.5 Flash API integration
 - **Frontend**: Bootstrap 5 with Chart.js for analytics
 - **APIs**: USGS Earthquake, GDACS Disaster, Google Maps integration
 - **Audio**: WebRTC speech recognition and Web Speech API
-- **Deployment**: Docker containerization with environment configuration
+- **Deployment**: Docker containerization on Google Cloud Platform
+- **Storage**: Google Cloud SQL for relational data, Django cache for temporary agentic memory
 
 ## 🚀 Getting Started
 
