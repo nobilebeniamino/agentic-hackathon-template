@@ -331,16 +331,6 @@ body {
     filter: grayscale(50%);
 }
 
-/* Navbar compatta per emergenze */
-.emergency-header {
-    min-height: 60px; /* Ridotto da default */
-}
-
-.emergency-header h1 {
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
 .emergency-header .nav-link {
     font-size: 0.9rem;
     font-weight: 600;
@@ -379,9 +369,8 @@ body {
     font-size: 0.8rem;
 }
 
-/* Navbar compatta per emergenze */
 .emergency-header {
-    min-height: 60px; /* Ridotto da default */
+    min-height: 60px;
 }
 
 .emergency-header h1 {
@@ -416,7 +405,6 @@ body {
     font-size: 0.8rem;
 }
 
-/* Responsive per mobile - versione migliorata */
 @media (max-width: 768px) {
     .emergency-header {
         min-height: auto;
@@ -431,7 +419,6 @@ body {
         font-size: 0.7rem;
     }
     
-    /* Menu mobile a hamburger */
     .emergency-header .navbar-nav {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 8px;
@@ -460,7 +447,6 @@ body {
         padding: 0.25rem;
     }
     
-    /* Stack verticalmente su schermi molto piccoli */
     .emergency-header .row > div {
         margin-bottom: 0.5rem;
     }
@@ -470,7 +456,6 @@ body {
     }
 }
 
-/* Per schermi extra piccoli (telefoni in verticale) */
 @media (max-width: 576px) {
     .emergency-header .col-md-4 {
         text-align: center;
@@ -496,7 +481,7 @@ body {
         border-radius: 10px;
     }
     
-    /* Bottoni di emergenza più grandi su mobile */
+    /* Emergency button larger on mobile */
     .btn-emergency {
         font-size: 1.2rem;
         padding: 15px 30px;
@@ -504,7 +489,6 @@ body {
         margin-bottom: 0.5rem;
     }
     
-    /* Chat più accessibile su mobile */
     .chat-container {
         height: 50vh;
         min-height: 300px;
@@ -516,7 +500,6 @@ body {
     }
 }
 
-/* Miglioramenti specifici per mobile */
 @media (max-width: 768px) {
     .emergency-header .nav-link {
         font-size: 0.85rem;
@@ -668,7 +651,6 @@ body {
     }
 }
 
-/* Varianti colore per diversi tipi di emergenza */
 .emergency-number-btn.medical:hover {
     background: rgba(255, 99, 71, 0.3);
 }
@@ -687,4 +669,256 @@ body {
 
 .emergency-number-btn.coast:hover {
     background: rgba(0, 191, 255, 0.3);
+}
+
+/* Quick Actions - Improved Design */
+.quick-actions-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quick-actions-title {
+    color: #333;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.quick-actions-icon {
+    font-size: 1.1rem;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-height: 80px;
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-action-btn:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.quick-action-btn:hover:before {
+    left: 100%;
+}
+
+.quick-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.quick-text {
+    font-size: 0.8rem;
+    line-height: 1.1;
+    text-align: center;
+}
+
+/* Emergency button variants */
+.btn-emergency-earthquake {
+    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+    color: white;
+    border-color: #654321;
+}
+
+.btn-emergency-earthquake:hover {
+    background: linear-gradient(135deg, #A0522D 0%, #CD853F 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+}
+
+.btn-emergency-medical {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-color: #bd2130;
+}
+
+.btn-emergency-medical:hover {
+    background: linear-gradient(135deg, #e04555 0%, #dc3545 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+.btn-emergency-fire {
+    background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+    color: white;
+    border-color: #d24d0b;
+}
+
+.btn-emergency-fire:hover {
+    background: linear-gradient(135deg, #ff8c24 0%, #fd7e14 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(253, 126, 20, 0.4);
+}
+
+.btn-emergency-police {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-color: #004085;
+}
+
+.btn-emergency-police:hover {
+    background: linear-gradient(135deg, #1a88ff 0%, #007bff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.btn-emergency-flood {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border-color: #0f6674;
+}
+
+.btn-emergency-flood:hover {
+    background: linear-gradient(135deg, #2ab0c8 0%, #17a2b8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
+}
+
+.btn-emergency-accident {
+    background: linear-gradient(135deg, #6f42c1 0%, #59339d 100%);
+    color: white;
+    border-color: #4c2a85;
+}
+
+.btn-emergency-accident:hover {
+    background: linear-gradient(135deg, #7952cc 0%, #6f42c1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
+}
+
+/* Secondary quick actions */
+.quick-actions-secondary {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.quick-action-btn-small {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-width: 1px;
+}
+
+.quick-action-btn-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.quick-icon-small {
+    font-size: 0.9rem;
+}
+
+.quick-text-small {
+    font-size: 0.75rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .quick-actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .quick-action-btn {
+        min-height: 70px;
+        padding: 0.6rem 0.4rem;
+    }
+    
+    .quick-icon {
+        font-size: 1.3rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    .quick-text {
+        font-size: 0.75rem;
+    }
+    
+    .quick-actions-secondary {
+        gap: 0.3rem;
+    }
+    
+    .quick-action-btn-small {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.4rem;
+    }
+    
+    .quick-action-btn {
+        min-height: 65px;
+        padding: 0.5rem 0.3rem;
+    }
+    
+    .quick-icon {
+        font-size: 1.2rem;
+    }
+    
+    .quick-text {
+        font-size: 0.7rem;
+    }
+    
+    .quick-action-btn-small {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
+    }
+    
+    .quick-icon-small {
+        font-size: 0.8rem;
+    }
+    
+    .quick-text-small {
+        font-size: 0.65rem;
+    }
+}
+
+/* Animation for when button is pressed */
+.quick-action-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.quick-action-btn-small:active {
+    transform: translateY(1px);
 }
