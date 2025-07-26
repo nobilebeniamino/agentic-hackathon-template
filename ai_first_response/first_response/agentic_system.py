@@ -1,0 +1,274 @@
+"""
+Agentic Emergency Response System
+Main orchestrator that coordinates Planner, Executor, and Memory components
+"""
+import logging
+from typing import Dict, Any
+from django.utils import timezone
+from .planner import EmergencyPlanner
+from .executor import EmergencyExecutor
+from .memory import EmergencyMemory
+from .responders import classify_message
+from .disaster_feeds import get_disaster_feed
+
+logger = logging.getLogger(__name__)
+
+class AgenticEmergencySystem:
+    """
+    Main agentic system that orchestrates emergency response using:
+    - Planner: Decomposes emergencies into actionable tasks
+    - Executor: Carries out planned actions using available tools
+    - Memory: Maintains context and learns from interactions
+    """
+    
+    def __init__(self):
+        self.planner = EmergencyPlanner()
+        self.executor = EmergencyExecutor()
+        self.memory = EmergencyMemory()
+        self.system_name = "Agentic Emergency Response AI"
+    
+    def process_emergency(self, message: str, latitude: float, longitude: float, 
+                         user_language: str = None) -> Dict[str, Any]:
+        """
+        Main entry point for processing emergency messages using agentic architecture
+        
+        Args:
+            message: Emergency message from user
+            latitude: User's latitude
+            longitude: User's longitude
+            user_language: User's preferred language
+            
+        Returns:
+            Comprehensive emergency response with planning, execution, and memory integration
+        """
+        
+        start_time = timezone.now()
+        logger.info(f"Processing emergency with agentic system: {message[:50]}...")
+        
+        try:
+            # Step 1: Get contextual information
+            context = self._gather_context(message, latitude, longitude, user_language)
+            
+            # Step 2: Initial classification using existing responder
+            classification = classify_message(
+                message, latitude, longitude, 
+                context.get('disaster_feed', ''), 
+                user_language
+            )
+            
+            # Step 3: Enhance context with classification and memory
+            enhanced_context = self._enhance_context_with_memory(context, classification)
+            
+            # Step 4: Plan comprehensive response
+            response_plan = self.planner.plan_response(
+                message=message,
+                location={'lat': latitude, 'lon': longitude},
+                severity=classification.get('severity', 'UNKNOWN'),
+                category=classification.get('category', 'UNKNOWN')
+            )
+            
+            # Step 5: Execute the plan
+            execution_log = self.executor.execute_plan(response_plan, enhanced_context)
+            
+            # Step 6: Store interaction in memory for future learning
+            interaction_id = f"emergency_{int(start_time.timestamp())}"
+            self.memory.store_interaction(
+                message_id=hash(interaction_id),  # Simplified ID
+                context=enhanced_context,
+                plan=response_plan,
+                execution_log=execution_log
+            )
+            
+            # Step 7: Prepare comprehensive response
+            agentic_response = self._prepare_agentic_response(
+                classification, response_plan, execution_log, enhanced_context
+            )
+            
+            end_time = timezone.now()
+            processing_time = (end_time - start_time).total_seconds()
+            
+            logger.info(f"Agentic emergency processing completed in {processing_time:.2f}s")
+            
+            return agentic_response
+            
+        except Exception as e:
+            logger.error(f"Agentic system error: {str(e)}")
+            # Fallback to basic classification
+            return classify_message(message, latitude, longitude, "", user_language)
+    
+    def _gather_context(self, message: str, latitude: float, longitude: float, 
+                       user_language: str) -> Dict[str, Any]:
+        """Gather comprehensive context for emergency processing"""
+        
+        context = {
+            'message': message,
+            'location': {'lat': latitude, 'lon': longitude},
+            'user_language': user_language,
+            'timestamp': timezone.now().isoformat(),
+            'system_version': '1.0-agentic'
+        }
+        
+        # Get disaster feed context
+        try:
+            disaster_feed = get_disaster_feed(latitude, longitude)
+            context['disaster_feed'] = disaster_feed
+        except Exception as e:
+            logger.warning(f"Could not fetch disaster feed: {str(e)}")
+            context['disaster_feed'] = ""
+        
+        # Get situational awareness from memory
+        try:
+            situational_awareness = self.memory.get_situational_awareness(
+                location={'lat': latitude, 'lon': longitude}
+            )
+            context['situational_awareness'] = situational_awareness
+        except Exception as e:
+            logger.warning(f"Could not get situational awareness: {str(e)}")
+            context['situational_awareness'] = {}
+        
+        return context
+    
+    def _enhance_context_with_memory(self, context: Dict, classification: Dict) -> Dict:
+        """Enhance context with relevant historical data from memory"""
+        
+        enhanced_context = context.copy()
+        enhanced_context.update({
+            'category': classification.get('category'),
+            'severity': classification.get('severity'),
+            'initial_instructions': classification.get('instructions', [])
+        })
+        
+        # Get relevant historical context
+        try:
+            relevant_context = self.memory.get_relevant_context(
+                location=context['location'],
+                category=classification.get('category', 'UNKNOWN'),
+                severity=classification.get('severity', 'UNKNOWN')
+            )
+            enhanced_context['historical_context'] = relevant_context
+        except Exception as e:
+            logger.warning(f"Could not get relevant context: {str(e)}")
+            enhanced_context['historical_context'] = {}
+        
+        return enhanced_context
+    
+    def _prepare_agentic_response(self, classification: Dict, plan: Dict, 
+                                execution_log: Dict, context: Dict) -> Dict[str, Any]:
+        """Prepare comprehensive agentic response"""
+        
+        # Start with basic classification
+        response = classification.copy()
+        
+        # Add agentic enhancements
+        response.update({
+            'agentic_system': {
+                'enabled': True,
+                'system_name': self.system_name,
+                'processing_mode': 'full_agentic'
+            },
+            'comprehensive_plan': plan,
+            'execution_log': execution_log,
+            'contextual_awareness': {
+                'disaster_feed_active': bool(context.get('disaster_feed')),
+                'historical_incidents': len(context.get('historical_context', {}).get('similar_incidents', [])),
+                'situational_factors': context.get('situational_awareness', {})
+            },
+            'enhanced_instructions': self._merge_instructions(
+                classification.get('instructions', []),
+                plan,
+                execution_log
+            ),
+            'monitoring_recommendations': plan.get('monitoring_tasks', []),
+            'resource_requirements': plan.get('resources_needed', []),
+            'confidence_indicators': {
+                'classification_confidence': 'high',
+                'plan_completeness': self._assess_plan_completeness(plan),
+                'execution_success': execution_log.get('final_status') == 'completed'
+            }
+        })
+        
+        return response
+    
+    def _merge_instructions(self, basic_instructions: list, plan: Dict, 
+                          execution_log: Dict) -> list:
+        """Merge basic instructions with agentic plan insights"""
+        
+        enhanced_instructions = basic_instructions.copy()
+        
+        # Limit basic instructions to avoid overwhelming response
+        if len(enhanced_instructions) > 3:
+            enhanced_instructions = enhanced_instructions[:3]
+        
+        # Add high-priority immediate actions from plan (max 2)
+        immediate_actions = plan.get('immediate_actions', [])
+        priority_actions = sorted(immediate_actions, key=lambda x: x.get('priority', 0), reverse=True)[:2]
+        for action in priority_actions:
+            enhanced_instructions.append(f"🔥 Priority Action: {action.get('action')}")
+        
+        # Add successful execution insights (max 3, unique summaries only)
+        added_summaries = set()
+        execution_count = 0
+        for exec_result in execution_log.get('executed_actions', []):
+            if execution_count >= 3:  # Limit to 3 system analyses
+                break
+            if exec_result.get('status') == 'completed' and exec_result.get('result'):
+                result = exec_result.get('result', {})
+                summary = result.get('summary')
+                if summary and summary not in added_summaries:
+                    enhanced_instructions.append(f"✅ System Analysis: {summary}")
+                    added_summaries.add(summary)
+                    execution_count += 1
+        
+        # Ensure total instructions don't exceed reasonable limit
+        if len(enhanced_instructions) > 8:
+            enhanced_instructions = enhanced_instructions[:8]
+        
+        return enhanced_instructions
+    
+    def _assess_plan_completeness(self, plan: Dict) -> str:
+        """Assess how complete the generated plan is"""
+        
+        completeness_score = 0
+        max_score = 4
+        
+        if plan.get('immediate_actions'):
+            completeness_score += 1
+        if plan.get('followup_actions'):
+            completeness_score += 1
+        if plan.get('resources_needed'):
+            completeness_score += 1
+        if plan.get('monitoring_tasks'):
+            completeness_score += 1
+        
+        if completeness_score >= 4:
+            return 'comprehensive'
+        elif completeness_score >= 3:
+            return 'good'
+        elif completeness_score >= 2:
+            return 'adequate'
+        else:
+            return 'basic'
+    
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get current system status and health"""
+        
+        return {
+            'system_name': self.system_name,
+            'components': {
+                'planner': {'status': 'active', 'type': 'EmergencyPlanner'},
+                'executor': {'status': 'active', 'type': 'EmergencyExecutor'},
+                'memory': {'status': 'active', 'type': 'EmergencyMemory'}
+            },
+            'capabilities': [
+                'emergency_classification',
+                'response_planning',
+                'action_execution',
+                'contextual_memory',
+                'situational_awareness',
+                'multilingual_support',
+                'disaster_feed_integration',
+                'tool_orchestration'
+            ],
+            'version': '1.0-agentic',
+            'architecture': 'planner_executor_memory'
+        }

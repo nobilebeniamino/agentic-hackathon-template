@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "System Dashboard - AI First Response" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+    
+    .alerts-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        margin-bottom: 2rem;
+    }
+    
+    .nav-pills .nav-link {
+        border-radius: 25px;
+        padding: 0.5rem 1.5rem;
+        margin-right: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-pills .nav-link.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+    }
+    
+    .text-sm {
+        font-size: 0.8rem;
+    }
+    
+    .d-flex.gap-2 {
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>🤖 {% trans "System Dashboard" %}</h2>
+            <p class="text-muted">{% trans "Agentic AI System Status & Cache Management" %}</p>
+        </div>
+        <div>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{% trans "Home" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">{% trans "Admin" %}</a></li>
+                    <li class="breadcrumb-item active">{% trans "System" %}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-4" id="systemTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="agentic-tab" data-bs-toggle="pill" data-bs-target="#agentic-panel" type="button" role="tab">
+                🤖 {% trans "Agentic AI System" %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cache-tab" data-bs-toggle="pill" data-bs-target="#cache-panel" type="button" role="tab">
+                💾 {% trans "Cache Management" %}
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="systemTabsContent">
+        <!-- Agentic AI System Panel -->
+        <div class="tab-pane fade show active" id="agentic-panel" role="tabpanel" aria-labelledby="agentic-tab">
+            <div class="alerts-container">
+                <h4>🤖 {% trans "Agentic AI System Status" %} <span class="badge bg-success" id="agentic-status">{% trans "Active" %}</span></h4>
+                <p class="text-muted">{% trans "Real-time status of the agentic emergency response system components" %}</p>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <h5>🎯 {% trans "Planner" %}</h5>
+                            <p><strong>Status:</strong> <span class="badge bg-success" id="planner-status">Active</span></p>
+                            <p><strong>Plans Generated:</strong> <span id="plans-generated">-</span></p>
+                            <p><strong>Avg Completeness:</strong> <span id="plan-completeness">-</span></p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <h5>⚡ {% trans "Executor" %}</h5>
+                            <p><strong>Status:</strong> <span class="badge bg-success" id="executor-status">Active</span></p>
+                            <p><strong>Actions Executed:</strong> <span id="actions-executed">-</span></p>
+                            <p><strong>Success Rate:</strong> <span id="execution-success">-</span></p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <h5>🧠 {% trans "Memory" %}</h5>
+                            <p><strong>Status:</strong> <span class="badge bg-success" id="memory-status">Active</span></p>
+                            <p><strong>Stored Patterns:</strong> <span id="stored-patterns">-</span></p>
+                            <p><strong>Context Hits:</strong> <span id="context-hits">-</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>🔧 {% trans "System Capabilities" %}</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul id="system-capabilities" class="list-unstyled">
+                                <li>• Emergency classification</li>
+                                <li>• Response planning</li>
+                                <li>• Action execution</li>
+                                <li>• Contextual memory</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li>• Situational awareness</li>
+                                <li>• Multilingual support</li>
+                                <li>• Disaster feed integration</li>
+                                <li>• Tool orchestration</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>📊 {% trans "Performance Metrics" %}</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>24h Messages:</strong> <span id="messages-24h">-</span></p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Avg Response Time:</strong> <span id="avg-response-time">-</span>ms</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Categories Processed:</strong> <span id="categories-processed">-</span></p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>System Version:</strong> <span id="system-version">1.0-agentic</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Management Panel -->
+        <div class="tab-pane fade" id="cache-panel" role="tabpanel" aria-labelledby="cache-tab">
+            <div class="alerts-container">
+                <h4>💾 {% trans "Disaster Feeds Cache" %} <span class="badge bg-info" id="cache-status">{% trans "Checking..." %}</span></h4>
+                <p class="text-muted">{% trans "Cache optimization for USGS earthquake and GDACS disaster feed APIs" %}</p>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>📈 {% trans "Cache Efficiency" %}</h6>
+                            <div class="stats-number" id="cache-efficiency">-</div>
+                            <p class="stats-label">{% trans "Efficiency %" %}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>🗂️ {% trans "Cache Entries" %}</h6>
+                            <div class="stats-number" id="cache-entries">-</div>
+                            <p class="stats-label">{% trans "Valid / Total" %}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>💽 {% trans "Cache Size" %}</h6>
+                            <div class="stats-number" id="cache-size">-</div>
+                            <p class="stats-label">{% trans "KB" %}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>⏱️ {% trans "TTL Settings" %}</h6>
+                            <div class="stats-number text-sm">USGS: 5min<br>GDACS: 15min</div>
+                            <p class="stats-label">{% trans "Cache Duration" %}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>🔧 {% trans "Cache Management" %}</h6>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshCacheStats()">
+                            🔄 {% trans "Refresh Stats" %}
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="clearCache()" id="clear-cache-btn">
+                            🗑️ {% trans "Clear Cache" %}
+                        </button>
+                    </div>
+                    <div class="mt-2" id="cache-message" style="display: none;"></div>
+                </div>
+
+                <div class="mt-4">
+                    <h6>📊 {% trans "API Call Optimization" %}</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <h6>🌍 GDACS API</h6>
+                                <p class="mb-1"><strong>Endpoint:</strong> gdacs.org/gdacsapi/api/events/geteventlist/MAP</p>
+                                <p class="mb-1"><strong>Cache TTL:</strong> 15 minutes</p>
+                                <p class="mb-0"><strong>Purpose:</strong> Global disaster alerts and events</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <h6>🌋 USGS API</h6>
+                                <p class="mb-1"><strong>Endpoint:</strong> earthquake.usgs.gov/fdsnws/event/1/query</p>
+                                <p class="mb-1"><strong>Cache TTL:</strong> 5 minutes</p>
+                                <p class="mb-0"><strong>Purpose:</strong> Real-time earthquake data</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Agentic System Status Functions
+function updateAgenticSystemStatus() {
+    console.log('Updating agentic system status...');
+    
+    fetch('/api/first-response/agentic/status/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Agentic system status:', data);
+            
+            if (data.status === 'success') {
+                // Update component status badges
+                document.getElementById('planner-status').textContent = data.planner_status;
+                document.getElementById('planner-status').className = `badge bg-${data.planner_status === 'Active' ? 'success' : 'danger'}`;
+                
+                document.getElementById('executor-status').textContent = data.executor_status;
+                document.getElementById('executor-status').className = `badge bg-${data.executor_status === 'Active' ? 'success' : 'danger'}`;
+                
+                document.getElementById('memory-status').textContent = data.memory_status;
+                document.getElementById('memory-status').className = `badge bg-${data.memory_status === 'Active' ? 'success' : 'danger'}`;
+                
+                // Update metrics
+                document.getElementById('plans-generated').textContent = data.plans_generated || '-';
+                document.getElementById('plan-completeness').textContent = data.plan_completeness ? data.plan_completeness + '%' : '-';
+                document.getElementById('actions-executed').textContent = data.actions_executed || '-';
+                document.getElementById('execution-success').textContent = data.execution_success ? data.execution_success + '%' : '-';
+                document.getElementById('stored-patterns').textContent = data.stored_patterns || '-';
+                document.getElementById('context-hits').textContent = data.context_hits || '-';
+                
+                // Performance metrics
+                document.getElementById('messages-24h').textContent = data.messages_24h || '-';
+                document.getElementById('avg-response-time').textContent = data.avg_response_time || '-';
+                document.getElementById('categories-processed').textContent = data.categories_processed || '-';
+                
+                // Overall status
+                document.getElementById('agentic-status').textContent = 'Active';
+                document.getElementById('agentic-status').className = 'badge bg-success';
+                
+            } else {
+                console.error('Error in agentic status response:', data.error);
+                document.getElementById('agentic-status').textContent = 'Error';
+                document.getElementById('agentic-status').className = 'badge bg-danger';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching agentic system status:', error);
+            document.getElementById('agentic-status').textContent = 'Offline';
+            document.getElementById('agentic-status').className = 'badge bg-danger';
+        });
+}
+
+// Cache Management Functions
+function refreshCacheStats() {
+    console.log('Refreshing cache statistics...');
+    
+    fetch('/api/first-response/cache/stats/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Cache stats:', data);
+            
+            if (data.status === 'success') {
+                const stats = data.cache_stats;
+                
+                // Update cache status badge
+                document.getElementById('cache-status').textContent = 'Active';
+                document.getElementById('cache-status').className = 'badge bg-success';
+                
+                // Update cache metrics
+                document.getElementById('cache-efficiency').textContent = stats.cache_efficiency_pct + '%';
+                document.getElementById('cache-entries').textContent = `${stats.valid_entries} / ${stats.total_entries}`;
+                document.getElementById('cache-size').textContent = stats.cache_size_kb;
+                
+                // Show cache message if needed
+                if (stats.expired_entries > 0) {
+                    showCacheMessage(`Found ${stats.expired_entries} expired entries (cleaned up)`, 'info');
+                }
+                
+            } else {
+                console.error('Error in cache stats response:', data.error);
+                document.getElementById('cache-status').textContent = 'Error';
+                document.getElementById('cache-status').className = 'badge bg-danger';
+                showCacheMessage('Error fetching cache stats: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching cache stats:', error);
+            document.getElementById('cache-status').textContent = 'Offline';
+            document.getElementById('cache-status').className = 'badge bg-secondary';
+            showCacheMessage('Failed to connect to cache API', 'error');
+        });
+}
+
+function clearCache() {
+    if (!confirm('Are you sure you want to clear the disaster feeds cache? This will cause all next API calls to fetch fresh data.')) {
+        return;
+    }
+    
+    console.log('Clearing disaster feeds cache...');
+    
+    // Disable button during request
+    const clearBtn = document.getElementById('clear-cache-btn');
+    clearBtn.disabled = true;
+    clearBtn.textContent = '🔄 Clearing...';
+    
+    fetch('/api/first-response/cache/clear/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Cache clear response:', data);
+        
+        if (data.status === 'success') {
+            showCacheMessage('Cache cleared successfully!', 'success');
+            // Refresh stats after clearing
+            setTimeout(refreshCacheStats, 1000);
+        } else {
+            showCacheMessage('Error clearing cache: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error clearing cache:', error);
+        showCacheMessage('Failed to clear cache', 'error');
+    })
+    .finally(() => {
+        // Re-enable button
+        clearBtn.disabled = false;
+        clearBtn.innerHTML = '🗑️ {% trans "Clear Cache" %}';
+    });
+}
+
+function showCacheMessage(message, type) {
+    const messageDiv = document.getElementById('cache-message');
+    messageDiv.innerHTML = `<div class="alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
+    messageDiv.style.display = 'block';
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        messageDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize system monitoring
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial status for both systems
+    updateAgenticSystemStatus();
+    refreshCacheStats();
+    
+    // Update agentic system every 30 seconds
+    setInterval(updateAgenticSystemStatus, 30000);
+    
+    // Update cache stats every 2 minutes
+    setInterval(refreshCacheStats, 120000);
+});
+</script>
+{% endblock %}

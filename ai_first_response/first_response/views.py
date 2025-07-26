@@ -11,8 +11,10 @@ from django.utils.translation import get_language
 from django.core.files.storage import default_storage
 from .models import EmergencyCategory, ReceivedMessage
 from .responders import classify_message
-from .disaster_feeds import recent_quakes, gdacs_events
+from .disaster_feeds import recent_quakes, gdacs_events, get_cache_stats, cleanup_expired_cache, clear_cache
 from .audio_utils import speech_to_text, text_to_speech, convert_audio_format, cleanup_audio_file
+from .agentic_system import AgenticEmergencySystem
+from .metrics import agentic_metrics
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Q, Avg
 from django.db.models.functions import TruncDay, TruncHour
@@ -149,53 +151,34 @@ def first_response(request):
         
         print(f"Final detected user language: {user_lang}")
         
-        # classify raw message first
-        print(msg)
-        classification = classify_message(msg, lat, lon, user_lang=user_lang)
-        print(classification)
-        category = classification.get('category', '').upper()
-
-        # if natural disaster, append feed snippet
-        if category in ['EARTHQUAKE', 'FLOOD', 'VOLCANO', 'FIRE']:
-            try:
-                quakes = recent_quakes(lat, lon)
-                if quakes:
-                    latest = quakes[0]['properties']
-                    feed_snippet = f"M{latest['mag']} earthquake {latest['place']} at {latest['time']} UTC"
-                    print(f"Found earthquake data: {feed_snippet}")
-                else:
-                    print("No recent earthquakes found, trying GDACS...")
-                    gd = gdacs_events(lat, lon)
-                    # Safely handle GDACS data
-                    if gd and len(gd) > 0:
-                        # Convert to string representation instead of JSON
-                        event = gd[0]
-                        feed_snippet = f"Disaster event: {event.get('eventname', 'Unknown')} - {event.get('alertlevel', 'Unknown')} alert"
-                        print(f"Found GDACS data: {feed_snippet}")
-                    else:
-                        feed_snippet = ''
-                        print("No GDACS data found")
-                
-                # Only re-classify if we found some feed data
-                if feed_snippet:
-                    print(f"Re-classifying with feed: {feed_snippet}")
-                    classification = classify_message(msg, lat, lon, feed_snippet, user_lang=user_lang)
-                    print(f"Re-classified with feed: {classification}")
-                else:
-                    print("No external feed data available, using original classification")
-                    
-            except Exception as feed_error:
-                print(f"Error fetching external feeds: {feed_error}")
-                feed_snippet = ''
-                # Continue with original classification
-
+        # **AGENTIC SYSTEM INTEGRATION**
+        # Initialize the agentic emergency response system
+        agentic_system = AgenticEmergencySystem()
+        
+        # Process emergency with full agentic architecture
+        print(f"Processing with agentic system: {msg}")
+        agentic_response = agentic_system.process_emergency(
+            message=msg,
+            latitude=lat,
+            longitude=lon,
+            user_language=user_lang
+        )
+        print(f"Agentic response: {agentic_response}")
+        
+        # Extract data for backward compatibility with existing frontend
+        category = agentic_response.get('category', 'Unknown')
+        severity = agentic_response.get('severity', 'INFO')
+        instructions = agentic_response.get('enhanced_instructions', 
+                                          agentic_response.get('instructions', []))
+        
+        # Get feed snippet from agentic context
+        feed_snippet = ''
+        if 'contextual_awareness' in agentic_response:
+            if agentic_response['contextual_awareness'].get('disaster_feed_active'):
+                feed_snippet = "Disaster feed data analyzed by agentic system"
+        
         # Calculate processing time
         processing_time_ms = int((time.time() - start_time) * 1000)
-        
-        # Safely extract and validate data
-        category = classification.get('category', 'Unknown')
-        severity = classification.get('severity', 'INFO') 
-        instructions = classification.get('instructions', [])
         
         # Ensure instructions is a list
         if not isinstance(instructions, list):
@@ -206,7 +189,7 @@ def first_response(request):
         
         print(f"Final classification - Category: {category}, Severity: {severity}, Instructions: {instructions}")
         
-        # Update ReceivedMessage with results
+        # Update ReceivedMessage with agentic results
         try:
             received_message.ai_category = category
             received_message.ai_severity = severity
@@ -214,18 +197,35 @@ def first_response(request):
             received_message.external_feed = feed_snippet
             received_message.response_time_ms = processing_time_ms
             received_message.processed_at = timezone.now()
+            
+            # Store agentic system metadata
+            received_message.ai_model = 'agentic-gemini-1.5-flash'
+            
             received_message.save()
-            print("ReceivedMessage saved successfully")
+            print("ReceivedMessage saved successfully with agentic data")
         except Exception as save_error:
             print(f"Error saving ReceivedMessage: {save_error}")
             # Continue with response even if save fails
 
-        # Prepare response data with safe defaults
+        # Prepare enhanced response data with agentic insights
+        # Ensure instructions are JSON serializable and limited in length
+        if isinstance(instructions, list):
+            # Limit to 8 instructions max and ensure they're strings
+            instructions = [str(instr)[:200] for instr in instructions[:8]]  # Truncate long instructions
+        
         response_data = {
             "category": category,
             "severity": severity,
             "instructions": instructions,
-            "feed": feed_snippet
+            "feed": feed_snippet,
+            # Additional agentic data for frontend (optional)
+            "agentic_insights": {
+                "system_enabled": True,
+                "plan_quality": agentic_response.get('confidence_indicators', {}).get('plan_completeness', 'unknown'),
+                "historical_context": len(agentic_response.get('contextual_awareness', {}).get('historical_incidents', [])) if isinstance(agentic_response.get('contextual_awareness', {}).get('historical_incidents'), list) else 0,
+                "monitoring_tasks": len(agentic_response.get('monitoring_recommendations', [])) if isinstance(agentic_response.get('monitoring_recommendations'), list) else 0,
+                "resources_identified": len(agentic_response.get('resource_requirements', [])) if isinstance(agentic_response.get('resource_requirements'), list) else 0
+            }
         }
         
         print(f"Sending response: {response_data}")
@@ -682,4 +682,220 @@ def text_to_speech_api(request):
         return JsonResponse({
             "success": False,
             "error": str(e)
+        }, status=500)
+
+@csrf_exempt
+def agentic_system_status(request):
+    """API endpoint to get agentic system status and capabilities"""
+    if request.method != 'GET':
+        return HttpResponseBadRequest(json.dumps({"error": "GET required"}), content_type="application/json")
+    
+    try:
+        # Initialize agentic system
+        agentic_system = AgenticEmergencySystem()
+        
+        # Get system status
+        status = agentic_system.get_system_status()
+        
+        # Get real metrics from the metrics system
+        metrics = agentic_metrics.get_all_metrics()
+        planner_metrics = metrics.get('planner', {})
+        executor_metrics = metrics.get('executor', {})
+        memory_metrics = metrics.get('memory', {})
+        
+        # Add runtime statistics with error handling
+        try:
+            recent_messages = ReceivedMessage.objects.filter(
+                processed_at__gte=timezone.now() - timedelta(hours=24)
+            )
+            
+            runtime_stats = {
+                'messages_24h': recent_messages.count(),
+                'avg_response_time_ms': recent_messages.aggregate(
+                    avg_time=Avg('response_time_ms')
+                )['avg_time'] or 0,
+                'categories_processed': recent_messages.values('ai_category').distinct().count(),
+                'severities_handled': recent_messages.values('ai_severity').distinct().count()
+            }
+            
+        except Exception as e:
+            print(f"Error calculating runtime stats: {e}")
+            runtime_stats = {
+                'messages_24h': 0,
+                'avg_response_time_ms': 0,
+                'categories_processed': 0,
+                'severities_handled': 0
+            }
+        
+        # Format response for frontend compatibility
+        components = status.get('components', {})
+        
+        # Use real metrics from the metrics system
+        plans_generated = planner_metrics.get('plans_generated', 0)
+        plan_completeness = planner_metrics.get('completeness', 0)
+        actions_executed = executor_metrics.get('actions_executed', 0) 
+        execution_success = executor_metrics.get('success_rate', 0)
+        stored_patterns = memory_metrics.get('patterns_stored', 0)
+        context_hits = memory_metrics.get('context_hits', 0)
+        
+        response_data = {
+            "status": "success",
+            "planner_status": "Active" if components.get('planner', {}).get('status') == 'active' else "Inactive",
+            "executor_status": "Active" if components.get('executor', {}).get('status') == 'active' else "Inactive", 
+            "memory_status": "Active" if components.get('memory', {}).get('status') == 'active' else "Inactive",
+            "plans_generated": plans_generated,
+            "plan_completeness": plan_completeness,
+            "actions_executed": actions_executed, 
+            "execution_success": execution_success,
+            "stored_patterns": stored_patterns,
+            "context_hits": context_hits,
+            "messages_24h": runtime_stats['messages_24h'],
+            "avg_response_time": f"{runtime_stats['avg_response_time_ms']:.0f}",
+            "categories_processed": runtime_stats['categories_processed'],
+            "system_version": status.get('version', '1.0-agentic'),
+            "capabilities": status.get('capabilities', [])
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        print(f"Agentic system status error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "error": f"System status error: {str(e)}"
+        }, status=500)
+
+@csrf_exempt 
+def agentic_memory_insights(request):
+    """API endpoint to get memory insights and situational awareness"""
+    if request.method != 'POST':
+        return HttpResponseBadRequest(json.dumps({"error": "POST required"}), content_type="application/json")
+    
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+        lat = float(payload.get('lat', 0))
+        lon = float(payload.get('lon', 0))
+        
+        # Initialize memory system
+        from .memory import EmergencyMemory
+        memory = EmergencyMemory()
+        
+        # Get situational awareness
+        awareness = memory.get_situational_awareness(
+            location={'lat': lat, 'lon': lon}
+        )
+        
+        # Get interaction history
+        history = memory.get_interaction_history(limit=10)
+        
+        response_data = {
+            'situational_awareness': awareness,
+            'recent_interactions': history,
+            'memory_capabilities': [
+                'location_pattern_recognition',
+                'category_based_learning', 
+                'effectiveness_tracking',
+                'contextual_recall',
+                'trend_analysis'
+            ]
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({
+            "error": f"Memory insights error: {str(e)}"
+        }, status=500)
+
+
+@staff_member_required
+def disaster_feeds_cache_stats(request):
+    """API endpoint to get disaster feeds cache statistics"""
+    try:
+        from .disaster_feeds import get_cache_stats, cleanup_expired_cache
+        
+        # Cleanup expired entries first
+        cleanup_expired_cache()
+        
+        # Get cache statistics
+        cache_stats = get_cache_stats()
+        
+        # Calculate cache efficiency
+        total_entries = cache_stats['total_entries']
+        cache_efficiency = 0
+        if total_entries > 0:
+            cache_efficiency = (cache_stats['valid_entries'] / total_entries) * 100
+        
+        response_data = {
+            "status": "success",
+            "cache_stats": {
+                "total_entries": total_entries,
+                "valid_entries": cache_stats['valid_entries'],
+                "expired_entries": cache_stats['expired_entries'],
+                "cache_size_kb": round(cache_stats['cache_size_bytes'] / 1024, 2),
+                "cache_efficiency_pct": round(cache_efficiency, 1),
+                "usgs_ttl_minutes": 5,  # USGS_CACHE_TTL / 60
+                "gdacs_ttl_minutes": 15  # GDACS_CACHE_TTL / 60
+            }
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({
+            "error": f"Cache stats error: {str(e)}"
+        }, status=500)
+
+
+@staff_member_required
+def clear_disaster_feeds_cache(request):
+    """API endpoint to clear disaster feeds cache"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "POST method required"}, status=405)
+    
+    try:
+        from .disaster_feeds import clear_cache
+        
+        clear_cache()
+        
+        return JsonResponse({
+            "status": "success",
+            "message": "Disaster feeds cache cleared successfully"
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "error": f"Cache clear error: {str(e)}"
+        }, status=500)
+
+@staff_member_required
+def system_dashboard(request):
+    """System dashboard for agentic AI status and cache monitoring"""
+    context = {
+        'page_title': 'System Dashboard - Agentic AI & Cache Monitoring'
+    }
+    return render(request, 'admin/system_dashboard.html', context)
+
+@csrf_exempt 
+def reset_agentic_metrics(request):
+    """API endpoint to reset agentic metrics (admin only)"""
+    if request.method != 'POST':
+        return HttpResponseBadRequest(json.dumps({"error": "POST required"}), content_type="application/json")
+    
+    try:
+        # Reset all metrics
+        agentic_metrics.reset_metrics()
+        
+        return JsonResponse({
+            "status": "success",
+            "message": "Agentic metrics have been reset"
+        })
+        
+    except Exception as e:
+        print(f"Reset metrics error: {e}")
+        return JsonResponse({
+            "status": "error",
+            "error": f"Failed to reset metrics: {str(e)}"
         }, status=500)

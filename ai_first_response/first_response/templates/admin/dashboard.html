@@ -400,6 +400,26 @@
         </div>
     </div>
 </div>
+
+<!-- Quick Actions Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="alerts-container">
+            <h4>⚡ {% trans "Quick Actions" %}</h4>
+            <div class="d-flex gap-3 flex-wrap">
+                <a href="{% url 'system_dashboard' %}" class="btn btn-outline-primary">
+                    � {% trans "System Dashboard" %}
+                </a>
+                <button type="button" class="btn btn-outline-success" onclick="exportData()">
+                    � {% trans "Export Data" %}
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="refreshAlerts()">
+                    🔄 {% trans "Refresh Alerts" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -759,5 +779,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Quick Actions Functions
+function exportData() {
+    alert('Export functionality will be implemented soon!');
+}
+
+function refreshAlerts() {
+    window.location.reload();
+}
 </script>
 {% endblock %}

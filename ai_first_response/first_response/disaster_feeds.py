@@ -1,6 +1,67 @@
 import requests
 import datetime
 import math
+import hashlib
+import json
+import time
+from functools import wraps
+
+# Simple in-memory cache for disaster feed data
+_cache = {}
+_cache_ttl = {}
+
+# Cache TTL settings (in seconds)
+USGS_CACHE_TTL = 300  # 5 minutes for USGS earthquake data
+GDACS_CACHE_TTL = 900  # 15 minutes for GDACS disaster data
+
+def _get_cache_key(func_name, *args, **kwargs):
+    """Generate a cache key based on function name and parameters"""
+    key_data = {
+        'func': func_name,
+        'args': args,
+        'kwargs': kwargs
+    }
+    key_string = json.dumps(key_data, sort_keys=True)
+    return hashlib.md5(key_string.encode()).hexdigest()
+
+def _is_cache_valid(cache_key, ttl):
+    """Check if cache entry is still valid"""
+    if cache_key not in _cache or cache_key not in _cache_ttl:
+        return False
+    return time.time() - _cache_ttl[cache_key] < ttl
+
+def _get_from_cache(cache_key):
+    """Get data from cache if valid"""
+    return _cache.get(cache_key)
+
+def _set_cache(cache_key, data):
+    """Store data in cache with timestamp"""
+    _cache[cache_key] = data
+    _cache_ttl[cache_key] = time.time()
+
+def cache_with_ttl(ttl_seconds):
+    """Decorator to cache function results with TTL"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            cache_key = _get_cache_key(func.__name__, *args, **kwargs)
+            
+            # Check cache first
+            if _is_cache_valid(cache_key, ttl_seconds):
+                cached_data = _get_from_cache(cache_key)
+                if cached_data is not None:
+                    print(f"Cache HIT for {func.__name__} - {cache_key[:8]}")
+                    return cached_data
+            
+            # Cache miss - call the actual function
+            print(f"Cache MISS for {func.__name__} - {cache_key[:8]}")
+            result = func(*args, **kwargs)
+            
+            # Store in cache
+            _set_cache(cache_key, result)
+            return result
+        return wrapper
+    return decorator
 
 
 def _haversine_km(lat1, lon1, lat2, lon2):
@@ -11,6 +72,7 @@ def _haversine_km(lat1, lon1, lat2, lon2):
     return 2*R*math.asin(math.sqrt(a))
 
 
+@cache_with_ttl(USGS_CACHE_TTL)
 def recent_quakes(lat, lon, radius_km=300, min_mag=3.0, minutes=60):
     try:
         now = datetime.datetime.utcnow()
@@ -45,6 +107,7 @@ def recent_quakes(lat, lon, radius_km=300, min_mag=3.0, minutes=60):
         return []
 
 
+@cache_with_ttl(GDACS_CACHE_TTL)
 def gdacs_events(lat, lon, radius_km=50000):
     try:
         # Try the main GDACS API endpoint with geographic bounding box
@@ -164,6 +227,7 @@ def gdacs_events(lat, lon, radius_km=50000):
         return []
 
 
+@cache_with_ttl(GDACS_CACHE_TTL)
 def gdacs_events_from_rss(lat, lon, radius_km=50):
     """Fallback method using GDACS RSS feed"""
     try:
@@ -266,4 +330,86 @@ def gdacs_events_from_rss(lat, lon, radius_km=50):
     except Exception as e:
         print(f"GDACS RSS fallback error: {e}")
         return []
+
+
+def get_cache_stats():
+    """Get cache statistics for monitoring"""
+    current_time = time.time()
+    stats = {
+        'total_entries': len(_cache),
+        'valid_entries': 0,
+        'expired_entries': 0,
+        'cache_size_bytes': 0
+    }
+    
+    for key in _cache:
+        if key in _cache_ttl:
+            # Check if entry is still valid (using max TTL)
+            age = current_time - _cache_ttl[key]
+            if age < max(USGS_CACHE_TTL, GDACS_CACHE_TTL):
+                stats['valid_entries'] += 1
+            else:
+                stats['expired_entries'] += 1
+        
+        # Estimate size
+        try:
+            stats['cache_size_bytes'] += len(json.dumps(_cache[key]))
+        except:
+            pass
+    
+    return stats
+
+def clear_cache():
+    """Clear all cached data"""
+    global _cache, _cache_ttl
+    _cache.clear()
+    _cache_ttl.clear()
+    print("Disaster feeds cache cleared")
+
+def cleanup_expired_cache():
+    """Remove expired cache entries"""
+    current_time = time.time()
+    expired_keys = []
+    
+    for key in list(_cache_ttl.keys()):
+        # Use max TTL to determine if completely expired
+        if current_time - _cache_ttl[key] > max(USGS_CACHE_TTL, GDACS_CACHE_TTL) * 2:
+            expired_keys.append(key)
+    
+    for key in expired_keys:
+        _cache.pop(key, None)
+        _cache_ttl.pop(key, None)
+    
+    if expired_keys:
+        print(f"Cleaned up {len(expired_keys)} expired cache entries")
+
+
+def get_disaster_feed(lat, lon, radius_km=300):
+    """
+    Get comprehensive disaster feed for a location combining USGS and GDACS data
+    Used by the agentic system for contextual awareness
+    """
+    feed_data = []
+    
+    try:
+        # Get earthquake data
+        quakes = recent_quakes(lat, lon, radius_km)
+        if quakes:
+            for quake in quakes[:3]:  # Limit to 3 most recent
+                props = quake.get('properties', {})
+                feed_data.append(f"Earthquake M{props.get('mag', 'unknown')} - {props.get('place', 'unknown location')}")
+        
+        # Get GDACS data
+        gdacs = gdacs_events(lat, lon, radius_km)
+        if gdacs:
+            for event in gdacs[:3]:  # Limit to 3 most recent
+                event_name = event.get('eventname', 'Unknown Event')
+                alert_level = event.get('alertlevel', 'Unknown')
+                feed_data.append(f"Disaster Alert: {event_name} - {alert_level} level")
+        
+        return "; ".join(feed_data) if feed_data else ""
+        
+    except Exception as e:
+        print(f"Error getting disaster feed: {str(e)}")
+        return ""
 
