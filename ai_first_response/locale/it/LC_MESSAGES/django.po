@@ -124,8 +124,8 @@ msgstr "Numeri di Emergenza"
 
 #: first_response/templates/dashboard.html:154
 #: first_response/templates/dashboard.html:175
-msgid "Medical Emergency"
-msgstr "Emergenza Medica"
+msgid "Medical"
+msgstr "Medica"
 
 #: first_response/templates/dashboard.html:157
 #: first_response/templates/dashboard.html:178
@@ -139,8 +139,8 @@ msgstr "Polizia"
 
 #: first_response/templates/dashboard.html:165
 #: first_response/templates/dashboard.html:186
-msgid "General Emergency"
-msgstr "Emergenza Generale"
+msgid "General"
+msgstr "Generale"
 
 #: first_response/templates/dashboard.html:168
 #: first_response/templates/dashboard.html:189

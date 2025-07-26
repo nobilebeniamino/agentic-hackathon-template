@@ -547,3 +547,144 @@ body {
         border: 1px solid rgba(255, 255, 255, 0.5);
     }
 }
+
+/* Emergency Numbers - Compact Version */
+.emergency-numbers-compact {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    border-radius: 12px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.emergency-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.emergency-number-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 0.5rem 0.25rem;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    min-height: 60px;
+    justify-content: center;
+}
+
+.emergency-number-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.emergency-number-btn:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.emergency-icon {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.emergency-info {
+    line-height: 1.1;
+}
+
+.emergency-info small {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.9;
+    margin-bottom: 0.1rem;
+}
+
+.emergency-info strong {
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: block;
+}
+
+/* Responsive per mobile */
+@media (max-width: 768px) {
+    .emergency-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.4rem;
+    }
+    
+    .emergency-number-btn {
+        padding: 0.4rem 0.2rem;
+        min-height: 55px;
+    }
+    
+    .emergency-icon {
+        font-size: 1rem;
+    }
+    
+    .emergency-info small {
+        font-size: 0.65rem;
+    }
+    
+    .emergency-info strong {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .emergency-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.3rem;
+    }
+    
+    .emergency-number-btn {
+        padding: 0.3rem 0.15rem;
+        min-height: 50px;
+    }
+    
+    .emergency-icon {
+        font-size: 0.9rem;
+        margin-bottom: 0.15rem;
+    }
+    
+    .emergency-info small {
+        font-size: 0.6rem;
+    }
+    
+    .emergency-info strong {
+        font-size: 0.7rem;
+    }
+}
+
+/* Varianti colore per diversi tipi di emergenza */
+.emergency-number-btn.medical:hover {
+    background: rgba(255, 99, 71, 0.3);
+}
+
+.emergency-number-btn.fire:hover {
+    background: rgba(255, 140, 0, 0.3);
+}
+
+.emergency-number-btn.police:hover {
+    background: rgba(30, 144, 255, 0.3);
+}
+
+.emergency-number-btn.general:hover {
+    background: rgba(220, 20, 60, 0.3);
+}
+
+.emergency-number-btn.coast:hover {
+    background: rgba(0, 191, 255, 0.3);
+}

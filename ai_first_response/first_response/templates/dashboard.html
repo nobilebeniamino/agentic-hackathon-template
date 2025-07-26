@@ -13,51 +13,90 @@
 {% csrf_token %}
 <div class="row">
     <div class="col-12">
-        <!-- Emergency Numbers Section -->
-        <div class="emergency-numbers">
-            <h5 class="mb-3">🚨 <strong>{% trans "Emergency Numbers" %}</strong></h5>
+        <!-- Emergency Numbers Section - Compact Version -->
+        <div class="emergency-numbers-compact">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="mb-0 fw-bold">🚨 {% trans "Emergency" %}</h6>
+            </div>
+            
             {% get_current_language as LANGUAGE_CODE %}
             {% if LANGUAGE_CODE == 'it' %}
-                <!-- Italian Emergency Numbers -->
-                <div class="row">
-                    <div class="col-md-4">
-                        <strong>🚑 {% trans "Medical Emergency" %}:</strong> 118
-                    </div>
-                    <div class="col-md-4">
-                        <strong>🚒 {% trans "Fire Department" %}:</strong> 115
-                    </div>
-                    <div class="col-md-4">
-                        <strong>👮 {% trans "Police" %}:</strong> 113
-                    </div>
-                </div>
-                <div class="row mt-2">
-                    <div class="col-md-4">
-                        <strong>🆘 {% trans "General Emergency" %}:</strong> 112
-                    </div>
-                    <div class="col-md-4">
-                        <strong>⛵ {% trans "Coast Guard" %}:</strong> 1530
-                    </div>
+                <!-- Italian Emergency Numbers - Compact Grid -->
+                <div class="emergency-grid">
+                    <a href="tel:118" class="emergency-number-btn medical">
+                        <span class="emergency-icon">🚑</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Medical" %}</small>
+                            <strong>118</strong>
+                        </div>
+                    </a>
+                    <a href="tel:115" class="emergency-number-btn fire">
+                        <span class="emergency-icon">🚒</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Fire Department" %}</small>
+                            <strong>115</strong>
+                        </div>
+                    </a>
+                    <a href="tel:113" class="emergency-number-btn police">
+                        <span class="emergency-icon">👮</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Police" %}</small>
+                            <strong>113</strong>
+                        </div>
+                    </a>
+                    <a href="tel:112" class="emergency-number-btn general">
+                        <span class="emergency-icon">🆘</span>
+                        <div class="emergency-info">
+                            <small>{% trans "General" %}</small>
+                            <strong>112</strong>
+                        </div>
+                    </a>
+                    <a href="tel:1530" class="emergency-number-btn coast">
+                        <span class="emergency-icon">⛵</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Coast Guard" %}</small>
+                            <strong>1530</strong>
+                        </div>
+                    </a>
                 </div>
             {% else %}
-                <!-- US Emergency Numbers -->
-                <div class="row">
-                    <div class="col-md-4">
-                        <strong>🚑 {% trans "Medical Emergency" %}:</strong> 911
-                    </div>
-                    <div class="col-md-4">
-                        <strong>🚒 {% trans "Fire Department" %}:</strong> 911
-                    </div>
-                    <div class="col-md-4">
-                        <strong>👮 {% trans "Police" %}:</strong> 911
-                    </div>
-                </div>
-                <div class="row mt-2">
-                    <div class="col-md-4">
-                        <strong>🆘 {% trans "General Emergency" %}:</strong> 911
-                    </div>
-                    <div class="col-md-4">
-                        <strong>⛵ {% trans "Coast Guard" %}:</strong> 1-800-424-8802
-                    </div>
+                <!-- US Emergency Numbers - Compact Grid -->
+                <div class="emergency-grid">
+                    <a href="tel:911" class="emergency-number-btn medical">
+                        <span class="emergency-icon">🚑</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Medical" %}</small>
+                            <strong>911</strong>
+                        </div>
+                    </a>
+                    <a href="tel:911" class="emergency-number-btn fire">
+                        <span class="emergency-icon">🚒</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Fire" %}</small>
+                            <strong>911</strong>
+                        </div>
+                    </a>
+                    <a href="tel:911" class="emergency-number-btn police">
+                        <span class="emergency-icon">👮</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Police" %}</small>
+                            <strong>911</strong>
+                        </div>
+                    </a>
+                    <a href="tel:911" class="emergency-number-btn general">
+                        <span class="emergency-icon">🆘</span>
+                        <div class="emergency-info">
+                            <small>{% trans "General" %}</small>
+                            <strong>911</strong>
+                        </div>
+                    </a>
+                    <a href="tel:18004248802" class="emergency-number-btn coast">
+                        <span class="emergency-icon">⛵</span>
+                        <div class="emergency-info">
+                            <small>{% trans "Coast" %}</small>
+                            <strong>1-800-424-8802</strong>
+                        </div>
+                    </a>
                 </div>
             {% endif %}
         </div>
