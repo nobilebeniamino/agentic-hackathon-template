@@ -22,7 +22,8 @@ class EmergencyPlanner:
     def __init__(self):
         self.model = genai.GenerativeModel('gemini-1.5-flash')
     
-    def plan_response(self, message: str, location: Dict[str, float], severity: str, category: str, language: str = "en") -> List[Dict]:
+    def plan_response(self, message: str, location: Dict[str, float], severity: str, category: str, language: str = "en", 
+                     conversation_context: Dict = None) -> Dict:
         """
         Plan a comprehensive emergency response by breaking down into sub-tasks
         
@@ -32,22 +33,35 @@ class EmergencyPlanner:
             severity: Emergency severity level
             category: Emergency category
             language: User's preferred language (en/it)
+            conversation_context: Previous conversation context if this is a follow-up
             
         Returns:
-            List of planned tasks with priorities and actions
+            Dict with planned tasks and conversation management
         """
         
         # Language instruction based on user preference
         language_instruction = ""
         if language == "it":
-            language_instruction = "IMPORTANT: Respond in ITALIAN. All action descriptions must be in Italian."
+            language_instruction = "IMPORTANT: Respond in ITALIAN. All action descriptions and questions must be in Italian."
         else:
-            language_instruction = "IMPORTANT: Respond in ENGLISH. All action descriptions must be in English."
+            language_instruction = "IMPORTANT: Respond in ENGLISH. All action descriptions and questions must be in English."
+        
+        # Conversation context
+        conversation_prompt = ""
+        if conversation_context:
+            conversation_prompt = f"""
+CONVERSATION CONTEXT:
+- This is step {conversation_context.get('step', 1)} of an ongoing conversation
+- Previous messages: {conversation_context.get('previous_messages', [])}
+- Current severity: {conversation_context.get('current_severity', severity)}
+- Current category: {conversation_context.get('current_category', category)}
+"""
         
         planning_prompt = f"""
-You are an Emergency Response Planner Agent. Your role is to create actionable emergency plans for INDIVIDUAL CITIZENS, not emergency operators.
+You are an Emergency Response Planner Agent. Your role is to create actionable emergency plans for INDIVIDUAL CITIZENS and manage emergency conversations.
 
 {language_instruction}
+{conversation_prompt}
 
 EMERGENCY DETAILS:
 - Message: "{message}"
@@ -55,7 +69,7 @@ EMERGENCY DETAILS:
 - Severity: {severity}
 - Category: {category}
 
-Create a comprehensive response plan as JSON focused on INDIVIDUAL CITIZEN ACTIONS:
+Create a comprehensive response plan as JSON focused on INDIVIDUAL CITIZEN ACTIONS and CONVERSATION MANAGEMENT:
 
 {{
     "immediate_actions": [
@@ -69,10 +83,29 @@ Create a comprehensive response plan as JSON focused on INDIVIDUAL CITIZEN ACTIO
     ],
     "monitoring_tasks": [
         {{"task": "...", "frequency": "...", "duration": "..."}}
-    ]
+    ],
+    "conversation_management": {{
+        "needs_follow_up": true/false,
+        "follow_up_question": "...",
+        "conversation_complete": true/false,
+        "severity_update": "...",
+        "category_update": "...",
+        "reason_for_follow_up": "..."
+    }}
 }}
 
-GUIDELINES:
+CONVERSATION MANAGEMENT GUIDELINES:
+- Set "needs_follow_up" to true if you need more information to provide better help
+- Ask follow-up questions to clarify:
+  * Exact location details
+  * Number of people involved
+  * Severity of injuries/damage
+  * Available resources/escape routes
+  * Current safety status
+- Update severity/category if new information changes the assessment
+- Mark conversation complete when you have sufficient information for comprehensive help
+
+RESPONSE GUIDELINES:
 - Focus on actions an individual person can take (not emergency services or authorities)
 - Prioritize personal safety and immediate protective actions
 - Include practical steps like "call emergency services", "move to safety", "gather supplies"
@@ -93,6 +126,13 @@ Examples of BAD actions (avoid these):
 - "Issue public safety announcements"
 - "Coordinate with civil protection agencies"
 - "Deploy emergency resources"
+
+Examples of GOOD follow-up questions:
+- "Are you currently in a safe location?"
+- "How many people are with you?"
+- "Do you have access to emergency supplies?"
+- "Can you describe the extent of the damage/situation?"
+- "Are there any injuries that need immediate attention?"
 """
 
         try:

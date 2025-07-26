@@ -209,6 +209,49 @@
         color: #6c757d;
         margin-bottom: 1rem;
     }
+    
+    /* Follow-up Question Styles */
+    .message-follow-up-question {
+        background: #e2f0d9;
+        border-left: 5px solid #28a745;
+    }
+    
+    .follow-up-question-bubble {
+        background: #d1e7dd;
+        border: 1px solid #badbcc;
+    }
+    
+    .follow-up-header {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .follow-up-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .follow-up-input-indicator {
+        background: #d1e7dd;
+        padding: 0.5rem;
+        border-radius: 5px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .follow-up-mode {
+        border: 2px solid #28a745;
+        border-radius: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+    }
+    
+    .dismissed {
+        opacity: 0.6;
+        filter: grayscale(50%);
+    }
 </style>
 {% endblock %}
 
@@ -266,92 +309,93 @@
             {% endif %}
         </div>
 
-        <!-- Location Status -->
-        <div class="location-status">
-            📍 <span id="location-text">{% trans "Getting your location..." %}</span>
-        </div>
+        <div class="px-3">
+            <!-- Location Status -->
+            <div class="location-status">
+                📍 <span id="location-text">{% trans "Getting your location..." %}</span>
+            </div>
 
-        <!-- Chat Interface -->
-        <div class="chat-container">
-            <div class="chat-messages" id="chat-messages">
-                <div class="message message-ai">
-                    <div class="message-bubble">
-                        👋 <strong>{% trans "Hello! I'm your AI First Response assistant." %}</strong><br>
-                        {% trans "I'm here to help you with emergencies and provide safety instructions." %}<br><br>
-                        <strong>{% trans "Tell me what's happening:" %}</strong><br>
-                        • {% trans "Are you injured or in immediate danger?" %}<br>
-                        • {% trans "Is there a natural disaster (earthquake, fire, flood)?" %}<br>
-                        • {% trans "Do you need medical assistance?" %}<br><br>
-                        {% trans "Type your message below and I'll help you right away." %}
+            <!-- Chat Interface -->
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message message-ai">
+                        <div class="message-bubble">
+                            👋 <strong>{% trans "Hello! I'm your AI First Response assistant." %}</strong><br>
+                            {% trans "I'm here to help you with emergencies and provide safety instructions." %}<br><br>
+                            <strong>{% trans "Tell me what's happening:" %}</strong><br>
+                            • {% trans "Are you injured or in immediate danger?" %}<br>
+                            • {% trans "Is there a natural disaster (earthquake, fire, flood)?" %}<br>
+                            • {% trans "Do you need medical assistance?" %}<br><br>
+                            {% trans "Type your message below and I'll help you right away." %}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Loading Indicator -->
-        <div class="loading-indicator" id="loading">
-            <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+            <!-- Loading Indicator -->
+            <div class="loading-indicator" id="loading">
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <p class="mt-2 mb-0">{% trans "AI is analyzing your emergency..." %}</p>
             </div>
-            <p class="mt-2 mb-0">{% trans "AI is analyzing your emergency..." %}</p>
-        </div>
 
-        <!-- Input Section -->
-        <div class="input-group">
-            <input type="text" 
-                   class="form-control" 
-                   id="message-input" 
-                   placeholder="{% trans 'Describe your emergency situation...' %}"
-                   autocomplete="off">
-            <button class="btn btn-emergency btn-send" type="button" id="send-btn" onclick="sendMessage()">
-                ➤
-            </button>
-        </div>
-        
-        <!-- Voice Controls -->
-        <div class="voice-controls">
-            <button class="btn btn-voice btn-record" id="record-btn" onclick="startRecording()" title="{% trans 'Start Recording' %}">
-                🎤
-            </button>
-            <button class="btn btn-voice btn-stop" id="stop-btn" onclick="stopRecording()" style="display: none;" title="{% trans 'Stop Recording' %}">
-                ⏹️
-            </button>
-            <button class="btn btn-voice btn-play" id="play-response-btn" onclick="playLastResponse()" style="display: none;" title="{% trans 'Play AI Response' %}">
-                🔊
-            </button>
-            <div class="voice-status" id="voice-status">
-                {% trans "Click the microphone to record a voice message" %}
+            <!-- Input Section -->
+            <div class="input-group">
+                <input type="text" 
+                    class="form-control" 
+                    id="message-input" 
+                    placeholder="{% trans 'Describe your emergency situation...' %}"
+                    autocomplete="off">
+                <button class="btn btn-emergency btn-send" type="button" id="send-btn" onclick="sendMessage()">
+                    ➤
+                </button>
             </div>
-            <audio id="response-audio" class="audio-player" controls style="display: none;"></audio>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="row mt-3">
-            {% for category in emergency_categories %}
-                <div class="col-md-6">
-                    <button class="btn {{ category.css_class }} w-100 mb-2" 
-                            onclick="quickMessage('{{ category.quick_message|escapejs }}')">
-                        {{ category.icon }} {{ category.title }}
-                    </button>
+            
+            <!-- Voice Controls -->
+            <div class="voice-controls">
+                <button class="btn btn-voice btn-record" id="record-btn" onclick="startRecording()" title="{% trans 'Start Recording' %}">
+                    🎤
+                </button>
+                <button class="btn btn-voice btn-stop" id="stop-btn" onclick="stopRecording()" style="display: none;" title="{% trans 'Stop Recording' %}">
+                    ⏹️
+                </button>
+                <button class="btn btn-voice btn-play" id="play-response-btn" onclick="playLastResponse()" style="display: none;" title="{% trans 'Play AI Response' %}">
+                    🔊
+                </button>
+                <div class="voice-status" id="voice-status">
+                    {% trans "Click the microphone to record a voice message" %}
                 </div>
-            {% empty %}
-                <!-- Fallback if no categories in database -->
-                <div class="col-md-6">
-                    <button class="btn btn-outline-danger w-100 mb-2" onclick="quickMessage('There was an earthquake')">
-                        🏠 Earthquake
-                    </button>
-                </div>
-                <div class="col-md-6">
-                    <button class="btn btn-outline-danger w-100 mb-2" onclick="quickMessage('I need medical help')">
-                        🚑 Medical Emergency
-                    </button>
-                </div>
-            {% endfor %}
-        </div>
+                <audio id="response-audio" class="audio-player" controls style="display: none;"></audio>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="row mt-3">
+                {% for category in emergency_categories %}
+                    <div class="col-md-6">
+                        <button class="btn {{ category.css_class }} w-100 mb-2" 
+                                onclick="quickMessage('{{ category.quick_message|escapejs }}')">
+                            {{ category.icon }} {{ category.title }}
+                        </button>
+                    </div>
+                {% empty %}
+                    <!-- Fallback if no categories in database -->
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-danger w-100 mb-2" onclick="quickMessage('There was an earthquake')">
+                            🏠 Earthquake
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-danger w-100 mb-2" onclick="quickMessage('I need medical help')">
+                            🚑 Medical Emergency
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
 
-        <!-- Voice Controls Section -->
+        </div>
 
     </div>
 </div>
@@ -427,10 +471,15 @@ function quickMessage(message) {
     sendMessage();
 }
 
-function addMessage(content, isUser = false, isEmergency = false) {
+function addMessage(content, isUser = false, isEmergency = false, isFollowUp = false) {
     const chatMessages = document.getElementById('chat-messages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isUser ? 'message-user' : 'message-ai'}`;
+    
+    // Add follow-up indicator styling
+    if (isFollowUp) {
+        messageDiv.classList.add('message-follow-up');
+    }
     
     const bubbleClass = isEmergency ? 'message-emergency' : '';
     
@@ -439,8 +488,14 @@ function addMessage(content, isUser = false, isEmergency = false) {
     
     let messageContent = `
         <div class="message-bubble ${bubbleClass}">
-            ${content}
     `;
+    
+    // Add follow-up indicator for user messages
+    if (isUser && isFollowUp) {
+        messageContent += `<small class="follow-up-indicator"><i class="fas fa-reply"></i> {% trans "Follow-up" %}</small><br>`;
+    }
+    
+    messageContent += content;
     
     // Add listen button for AI messages
     if (!isUser) {
@@ -456,6 +511,7 @@ function addMessage(content, isUser = false, isEmergency = false) {
     
     messageContent += `</div>`;
     messageDiv.innerHTML = messageContent;
+    messageDiv.id = messageId;
     
     // Store the plain text content for TTS
     if (!isUser) {
@@ -464,17 +520,23 @@ function addMessage(content, isUser = false, isEmergency = false) {
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return messageId;
 }
 
 function showLoading(show) {
     document.getElementById('loading').style.display = show ? 'block' : 'none';
 }
 
-async function sendMessage() {
+// Track current conversation ID for follow-ups
+let currentConversationId = null;
+
+async function sendMessage(conversationId = null) {
     const input = document.getElementById('message-input');
     const message = input.value.trim();
     
     console.log('sendMessage called with message:', message);
+    console.log('conversationId:', conversationId);
     
     if (!message) {
         console.log('No message to send, returning early');
@@ -489,7 +551,8 @@ async function sendMessage() {
     isProcessingMessage = true;
     
     // Add user message to chat
-    addMessage(message, true);
+    const isFollowUp = conversationId !== null;
+    addMessage(message, true, false, isFollowUp);
     input.value = '';
     
     // Show loading
@@ -508,6 +571,12 @@ async function sendMessage() {
             lon: userLon || 7.6869,
             language: '{% get_current_language as CURRENT_LANG %}{{ CURRENT_LANG }}'
         };
+        
+        // Add conversation ID if this is a follow-up
+        if (conversationId) {
+            requestBody.conversation_id = conversationId;
+        }
+        
         console.log('Request body:', requestBody);
         
         const response = await fetch('/api/first-response/emergency/', {
@@ -556,7 +625,17 @@ async function sendMessage() {
                 responseHtml += `<br><strong>⚠️ ${translations.emergency_call_warning}</strong>`;
             }
             
-            addMessage(responseHtml, false, isEmergency);
+            // Store conversation ID if this is the start of a new conversation
+            if (!conversationId && data.message_id) {
+                currentConversationId = data.message_id;
+            }
+            
+            const messageId = addMessage(responseHtml, false, isEmergency);
+            
+            // Handle follow-up questions if present
+            if (data.conversation && data.conversation.needs_follow_up && data.conversation.follow_up_question) {
+                addFollowUpQuestion(data.conversation.follow_up_question, data.message_id, messageId);
+            }
         }
         
     } catch (error) {
@@ -882,6 +961,110 @@ async function playResponseAudio(messageId, buttonElement) {
         statusElement.textContent = `{% trans "Error" %}: ${error.message}`;
         buttonElement.disabled = false;
         buttonElement.innerHTML = '<i class="fas fa-volume-up"></i> {% trans "Listen" %}';
+    }
+}
+
+// Follow-up question functions
+function addFollowUpQuestion(question, conversationId, relatedMessageId) {
+    const chatMessages = document.getElementById('chat-messages');
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'message message-ai message-follow-up-question';
+    
+    const questionId = 'followup-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    
+    questionDiv.innerHTML = `
+        <div class="message-bubble follow-up-question-bubble">
+            <div class="follow-up-header">
+                <i class="fas fa-question-circle"></i> <strong>{% trans "Follow-up Question" %}</strong>
+            </div>
+            <div class="follow-up-content">${question}</div>
+            <div class="follow-up-actions mt-2">
+                <button class="btn btn-sm btn-primary me-2" onclick="replyToFollowUp('${conversationId}', '${questionId}')">
+                    <i class="fas fa-reply"></i> {% trans "Reply" %}
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="dismissFollowUp('${questionId}')">
+                    <i class="fas fa-times"></i> {% trans "Close" %}
+                </button>
+            </div>
+        </div>
+    `;
+    
+    questionDiv.id = questionId;
+    questionDiv.dataset.conversationId = conversationId;
+    questionDiv.dataset.relatedMessageId = relatedMessageId;
+    
+    chatMessages.appendChild(questionDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return questionId;
+}
+
+function replyToFollowUp(conversationId, questionId) {
+    // Focus on the input and set up for follow-up mode
+    const input = document.getElementById('message-input');
+    input.focus();
+    input.placeholder = "{% trans 'Type your follow-up response...' %}";
+    
+    // Store the conversation ID for the next message
+    const sendButton = document.getElementById('send-btn');
+    sendButton.onclick = () => {
+        sendMessage(conversationId);
+        // Reset the button and placeholder
+        sendButton.onclick = () => sendMessage();
+        input.placeholder = "{% trans 'Type your emergency message...' %}";
+        // Hide the follow-up question after replying
+        dismissFollowUp(questionId);
+    };
+    
+    // Visual indication that we're in follow-up mode
+    const messageInput = document.querySelector('.input-group');
+    messageInput.classList.add('follow-up-mode');
+    
+    // Add a visual indicator
+    let indicator = document.getElementById('follow-up-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'follow-up-indicator';
+        indicator.className = 'follow-up-input-indicator';
+        indicator.innerHTML = '<i class="fas fa-reply"></i> {% trans "Replying to follow-up question" %} <button class="btn btn-sm btn-link p-0 ms-2" onclick="cancelFollowUp()">{% trans "Cancel" %}</button>';
+        messageInput.insertBefore(indicator, messageInput.firstChild);
+    }
+}
+
+function dismissFollowUp(questionId) {
+    const questionElement = document.getElementById(questionId);
+    if (questionElement) {
+        questionElement.style.opacity = '0.5';
+        questionElement.style.pointerEvents = 'none';
+        
+        // Add dismissed styling
+        const bubble = questionElement.querySelector('.message-bubble');
+        if (bubble) {
+            bubble.classList.add('dismissed');
+        }
+    }
+    
+    // Also cancel any active follow-up input mode
+    cancelFollowUp();
+}
+
+function cancelFollowUp() {
+    // Reset the send button
+    const sendButton = document.getElementById('send-btn');
+    sendButton.onclick = () => sendMessage();
+    
+    // Reset input placeholder
+    const input = document.getElementById('message-input');
+    input.placeholder = "{% trans 'Type your emergency message...' %}";
+    
+    // Remove follow-up mode styling
+    const messageInput = document.querySelector('.input-group');
+    messageInput.classList.remove('follow-up-mode');
+    
+    // Remove indicator
+    const indicator = document.getElementById('follow-up-indicator');
+    if (indicator) {
+        indicator.remove();
     }
 }
 </script>

@@ -318,6 +318,28 @@
     </div>
 </div>
 
+<!-- Conversation Stats Row -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h3 class="stats-number">{{ conversations_active|default:0 }}</h3>
+            <p class="stats-label">{% trans "Active Conversations" %}</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h3 class="stats-number">{{ follow_ups_today|default:0 }}</h3>
+            <p class="stats-label">{% trans "Follow-ups Today" %}</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card warning">
+            <h3 class="stats-number warning">{{ avg_conversation_length|default:1.0|floatformat:1 }}</h3>
+            <p class="stats-label">{% trans "Avg Conversation Steps" %}</p>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="chart-container daily-chart">

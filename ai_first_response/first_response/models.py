@@ -57,6 +57,17 @@ class ReceivedMessage(models.Model):
                                   help_text="AI classified severity level")
     ai_instructions = models.JSONField(default=list, help_text="AI generated instructions")
     
+    # Conversation tracking
+    parent_message = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE,
+                                     related_name='follow_ups', help_text="Parent message if this is a follow-up")
+    conversation_step = models.PositiveIntegerField(default=1, help_text="Step number in conversation (1=initial)")
+    is_conversation_starter = models.BooleanField(default=True, help_text="Whether this starts a new conversation")
+    needs_follow_up = models.BooleanField(default=False, help_text="Whether AI requested more information")
+    follow_up_question = models.TextField(blank=True, help_text="Question asked for follow-up")
+    conversation_status = models.CharField(max_length=20, default='active', 
+                                         choices=[('active', 'Active'), ('completed', 'Completed'), ('abandoned', 'Abandoned')],
+                                         help_text="Status of the conversation")
+    
     # Context data
     external_feed = models.TextField(blank=True, help_text="External data feed used for context")
     response_time_ms = models.PositiveIntegerField(null=True, blank=True, 

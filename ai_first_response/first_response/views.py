@@ -70,6 +70,7 @@ def first_response(request):
         lat = payload.get('lat')
         lon = payload.get('lon')
         frontend_lang = payload.get('language')  # Language from frontend
+        conversation_id = payload.get('conversation_id')  # Parent message ID for follow-ups
         
         # Validate required fields
         if not msg:
@@ -83,14 +84,66 @@ def first_response(request):
         lat = float(lat)
         lon = float(lon)
         
-        # Create ReceivedMessage instance
+        # Detect user's preferred language from multiple sources
+        user_lang = None
+        
+        # Priority 1: Language from frontend (most reliable)
+        if frontend_lang:
+            user_lang = frontend_lang
+            print(f"Using frontend language: {user_lang}")
+        
+        # Priority 2: Try to get language from Django session
+        elif hasattr(request, 'session') and 'django_language' in request.session:
+            user_lang = request.session['django_language']
+            print(f"Using session language: {user_lang}")
+        
+        # Priority 3: Fallback to checking cookies
+        elif 'django_language' in request.COOKIES:
+            user_lang = request.COOKIES['django_language']
+            print(f"Using cookie language: {user_lang}")
+        
+        # Priority 4: Fallback to Accept-Language header
+        else:
+            accept_lang = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+            if 'it' in accept_lang.lower():
+                user_lang = 'it'
+            else:
+                user_lang = 'en'
+            print(f"Using Accept-Language header: {user_lang}")
+        
+        print(f"Final detected user language: {user_lang}")
+        
+        # Get session key for conversation tracking
+        session_key = request.session.session_key or ''
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        
+        # Create ReceivedMessage instance with conversation support
+        parent_message = None
+        conversation_step = 1
+        is_conversation_starter = True
+        
+        # Handle follow-up messages
+        if conversation_id:
+            try:
+                parent_message = ReceivedMessage.objects.get(id=conversation_id)
+                conversation_step = parent_message.follow_ups.count() + 2  # +1 for parent, +1 for this message
+                is_conversation_starter = False
+            except ReceivedMessage.DoesNotExist:
+                print(f"Warning: Parent message {conversation_id} not found")
+        
         received_message = ReceivedMessage.objects.create(
             user_message=msg,
             user_latitude=lat,
             user_longitude=lon,
             user_ip=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
-            session_key=request.session.session_key or '',
+            session_key=session_key,
+            parent_message=parent_message,
+            conversation_step=conversation_step,
+            is_conversation_starter=is_conversation_starter,
+            language=user_lang
         )
         
     except json.JSONDecodeError as e:
@@ -122,35 +175,6 @@ def first_response(request):
         # Optionally fetch external feed based on initial message classification
         feed_snippet = ''
         
-        # Detect user's preferred language from multiple sources
-        user_lang = None
-        
-        # Priority 1: Language from frontend (most reliable)
-        if frontend_lang:
-            user_lang = frontend_lang
-            print(f"Using frontend language: {user_lang}")
-        
-        # Priority 2: Try to get language from Django session
-        elif hasattr(request, 'session') and 'django_language' in request.session:
-            user_lang = request.session['django_language']
-            print(f"Using session language: {user_lang}")
-        
-        # Priority 3: Fallback to checking cookies
-        elif 'django_language' in request.COOKIES:
-            user_lang = request.COOKIES['django_language']
-            print(f"Using cookie language: {user_lang}")
-        
-        # Priority 4: Fallback to Accept-Language header
-        else:
-            accept_lang = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
-            if 'it' in accept_lang.lower():
-                user_lang = 'it'
-            else:
-                user_lang = 'en'
-            print(f"Using Accept-Language header: {user_lang}")
-        
-        print(f"Final detected user language: {user_lang}")
-        
         # **AGENTIC SYSTEM INTEGRATION**
         # Initialize the agentic emergency response system
         agentic_system = AgenticEmergencySystem()
@@ -161,7 +185,9 @@ def first_response(request):
             message=msg,
             latitude=lat,
             longitude=lon,
-            user_language=user_lang
+            user_language=user_lang,
+            conversation_id=conversation_id,
+            session_key=session_key
         )
         print(f"Agentic response: {agentic_response}")
         
@@ -189,8 +215,11 @@ def first_response(request):
         
         print(f"Final classification - Category: {category}, Severity: {severity}, Instructions: {instructions}")
         
-        # Update ReceivedMessage with agentic results
+        # Update ReceivedMessage with agentic results and conversation management
         try:
+            # Get conversation management info
+            conversation_info = agentic_response.get('conversation', {})
+            
             received_message.ai_category = category
             received_message.ai_severity = severity
             received_message.ai_instructions = instructions
@@ -198,11 +227,29 @@ def first_response(request):
             received_message.response_time_ms = processing_time_ms
             received_message.processed_at = timezone.now()
             
+            # Conversation management
+            received_message.needs_follow_up = conversation_info.get('needs_follow_up', False)
+            received_message.follow_up_question = conversation_info.get('follow_up_question', '')
+            if conversation_info.get('conversation_complete', True):
+                received_message.conversation_status = 'completed'
+            else:
+                received_message.conversation_status = 'active'
+            
             # Store agentic system metadata
             received_message.ai_model = 'agentic-gemini-1.5-flash'
             
             received_message.save()
-            print("ReceivedMessage saved successfully with agentic data")
+            
+            # Update parent message if this is a follow-up and category/severity changed
+            if parent_message and (conversation_info.get('severity_update') or conversation_info.get('category_update')):
+                if conversation_info.get('severity_update'):
+                    parent_message.ai_severity = conversation_info['severity_update']
+                if conversation_info.get('category_update'):
+                    parent_message.ai_category = conversation_info['category_update']
+                parent_message.save()
+                print(f"Updated parent message with new assessment: {parent_message.ai_category}/{parent_message.ai_severity}")
+            
+            print("ReceivedMessage saved successfully with agentic and conversation data")
         except Exception as save_error:
             print(f"Error saving ReceivedMessage: {save_error}")
             # Continue with response even if save fails
@@ -218,6 +265,16 @@ def first_response(request):
             "severity": severity,
             "instructions": instructions,
             "feed": feed_snippet,
+            "message_id": received_message.id,  # Include message ID for conversation tracking
+            # Conversation management for frontend
+            "conversation": {
+                "needs_follow_up": conversation_info.get('needs_follow_up', False),
+                "follow_up_question": conversation_info.get('follow_up_question', ''),
+                "conversation_complete": conversation_info.get('conversation_complete', True),
+                "is_follow_up": conversation_info.get('is_follow_up', False),
+                "step": conversation_info.get('step', 1),
+                "reason_for_follow_up": conversation_info.get('reason_for_follow_up', '')
+            },
             # Additional agentic data for frontend (optional)
             "agentic_insights": {
                 "system_enabled": True,
@@ -314,6 +371,28 @@ def admin_dashboard(request):
     error_count = ReceivedMessage.objects.filter(has_error=True).count()
     error_rate = (error_count / total_processed * 100) if total_processed > 0 else 0
     
+    # Conversation statistics
+    # Active conversations: count unique parent messages that are still active
+    conversations_active = ReceivedMessage.objects.filter(
+        conversation_status='active',
+        parent_message__isnull=True  # Only count parent messages, not follow-ups
+    ).count()
+    
+    follow_ups_today = ReceivedMessage.objects.filter(
+        received_at__gte=end_date.replace(hour=0, minute=0, second=0, microsecond=0),
+        conversation_step__gt=1  # Follow-up messages have step > 1
+    ).count()
+    
+    # Average conversation length: calculate the average number of messages per conversation
+    # For each parent message, count itself + all its follow-ups
+    conversation_lengths = ReceivedMessage.objects.filter(
+        is_conversation_starter=True
+    ).annotate(
+        total_messages=Count('follow_ups') + 1  # Count follow-ups + the parent message itself
+    ).aggregate(avg_length=Avg('total_messages'))['avg_length'] or 1.0
+    
+    avg_conversation_length = conversation_lengths
+    
     context = {
         'total_messages': total_messages,
         'messages_last_30_days': messages_last_30_days,
@@ -326,6 +405,10 @@ def admin_dashboard(request):
         'hourly_stats': hourly_stats,
         'recent_critical': recent_critical,
         'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
+        # Conversation statistics
+        'conversations_active': conversations_active,
+        'follow_ups_today': follow_ups_today,
+        'avg_conversation_length': avg_conversation_length,
     }
     
     return render(request, 'admin/dashboard.html', context)

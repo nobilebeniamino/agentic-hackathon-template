@@ -28,7 +28,8 @@ class AgenticEmergencySystem:
         self.system_name = "Agentic Emergency Response AI"
     
     def process_emergency(self, message: str, latitude: float, longitude: float, 
-                         user_language: str = None) -> Dict[str, Any]:
+                         user_language: str = None, conversation_id: int = None, 
+                         session_key: str = None) -> Dict[str, Any]:
         """
         Main entry point for processing emergency messages using agentic architecture
         
@@ -37,6 +38,8 @@ class AgenticEmergencySystem:
             latitude: User's latitude
             longitude: User's longitude
             user_language: User's preferred language
+            conversation_id: ID of parent message if this is a follow-up
+            session_key: User's session for conversation tracking
             
         Returns:
             Comprehensive emergency response with planning, execution, and memory integration
@@ -46,8 +49,11 @@ class AgenticEmergencySystem:
         logger.info(f"Processing emergency with agentic system: {message[:50]}...")
         
         try:
-            # Step 1: Get contextual information
-            context = self._gather_context(message, latitude, longitude, user_language)
+            # Step 1: Check if this is a conversation follow-up
+            conversation_context = self._get_conversation_context(conversation_id) if conversation_id else None
+            
+            # Step 2: Get contextual information
+            context = self._gather_context(message, latitude, longitude, user_language, conversation_context)
             
             # Step 2: Initial classification using existing responder
             classification = classify_message(
@@ -59,13 +65,14 @@ class AgenticEmergencySystem:
             # Step 3: Enhance context with classification and memory
             enhanced_context = self._enhance_context_with_memory(context, classification)
             
-            # Step 4: Plan comprehensive response
+            # Step 4: Plan comprehensive response (with conversation context)
             response_plan = self.planner.plan_response(
                 message=message,
                 location={'lat': latitude, 'lon': longitude},
                 severity=classification.get('severity', 'UNKNOWN'),
                 category=classification.get('category', 'UNKNOWN'),
-                language=user_language or 'en'
+                language=user_language or 'en',
+                conversation_context=conversation_context
             )
             
             # Step 5: Execute the plan
@@ -98,7 +105,7 @@ class AgenticEmergencySystem:
             return classify_message(message, latitude, longitude, "", user_language)
     
     def _gather_context(self, message: str, latitude: float, longitude: float, 
-                       user_language: str) -> Dict[str, Any]:
+                       user_language: str, conversation_context: Dict = None) -> Dict[str, Any]:
         """Gather comprehensive context for emergency processing"""
         
         context = {
@@ -108,6 +115,15 @@ class AgenticEmergencySystem:
             'timestamp': timezone.now().isoformat(),
             'system_version': '1.0-agentic'
         }
+        
+        # Add conversation context if this is a follow-up
+        if conversation_context:
+            context['conversation'] = conversation_context
+            context['is_follow_up'] = True
+            context['conversation_step'] = conversation_context.get('step', 1)
+        else:
+            context['is_follow_up'] = False
+            context['conversation_step'] = 1
         
         # Get disaster feed context
         try:
@@ -155,10 +171,19 @@ class AgenticEmergencySystem:
     
     def _prepare_agentic_response(self, classification: Dict, plan: Dict, 
                                 execution_log: Dict, context: Dict) -> Dict[str, Any]:
-        """Prepare comprehensive agentic response"""
+        """Prepare comprehensive agentic response with conversation management"""
         
         # Start with basic classification
         response = classification.copy()
+        
+        # Handle conversation management from plan
+        conversation_mgmt = plan.get('conversation_management', {})
+        
+        # Update classification if the conversation revealed new information
+        if conversation_mgmt.get('severity_update'):
+            response['severity'] = conversation_mgmt['severity_update']
+        if conversation_mgmt.get('category_update'):
+            response['category'] = conversation_mgmt['category_update']
         
         # Add agentic enhancements
         response.update({
@@ -185,6 +210,15 @@ class AgenticEmergencySystem:
                 'classification_confidence': 'high',
                 'plan_completeness': self._assess_plan_completeness(plan),
                 'execution_success': execution_log.get('final_status') == 'completed'
+            },
+            # Conversation management
+            'conversation': {
+                'needs_follow_up': conversation_mgmt.get('needs_follow_up', False),
+                'follow_up_question': conversation_mgmt.get('follow_up_question', ''),
+                'conversation_complete': conversation_mgmt.get('conversation_complete', True),
+                'is_follow_up': context.get('is_follow_up', False),
+                'step': context.get('conversation_step', 1),
+                'reason_for_follow_up': conversation_mgmt.get('reason_for_follow_up', '')
             }
         })
         
@@ -352,3 +386,39 @@ class AgenticEmergencySystem:
         
         # Default: don't show unless clearly meaningful
         return False
+    
+    def _get_conversation_context(self, conversation_id: int) -> Dict[str, Any]:
+        """Get context from previous conversation messages"""
+        try:
+            from .models import ReceivedMessage
+            
+            # Get the parent message and all follow-ups
+            parent_message = ReceivedMessage.objects.get(id=conversation_id)
+            follow_ups = parent_message.follow_ups.all().order_by('conversation_step')
+            
+            # Build conversation history
+            all_messages = [parent_message] + list(follow_ups)
+            previous_messages = []
+            
+            for msg in all_messages:
+                previous_messages.append({
+                    'step': msg.conversation_step,
+                    'message': msg.user_message,
+                    'category': msg.ai_category,
+                    'severity': msg.ai_severity,
+                    'timestamp': msg.received_at.isoformat()
+                })
+            
+            return {
+                'parent_id': parent_message.id,
+                'step': len(all_messages) + 1,
+                'previous_messages': previous_messages,
+                'current_severity': parent_message.ai_severity,
+                'current_category': parent_message.ai_category,
+                'conversation_status': parent_message.conversation_status,
+                'session_key': parent_message.session_key
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting conversation context: {str(e)}")
+            return None
